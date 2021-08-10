@@ -6,6 +6,7 @@ from torch.autograd import Variable
 
 import gym
 
+
 # Building the AI
 
 def get_gpu():
@@ -49,5 +50,18 @@ class CNN(nn.Module):
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
         return self.fc2(x)
+
+
+class SoftmaxBody(nn.Module):
+
+    def __init__(self, temperature):
+        super(SoftmaxBody, self).__init__()
+        self.temperature = temperature
+
+    # Outputs from the neural network
+    def forward(self, outputs):
+        probabilities = F.softmax(outputs*self.temperature)
+        actions = probabilities.multinomial(0)
+        return actions
 
 # Deep Q-Learning implementation
