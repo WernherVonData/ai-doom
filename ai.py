@@ -64,4 +64,19 @@ class SoftmaxBody(nn.Module):
         actions = probabilities.multinomial(0)
         return actions
 
+
+class AI:
+    def __init__(self, brain, body):
+        self.brain = brain
+        self.body = body
+
+    def __call__(self, inputs):
+        input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32)))
+        output = self.brain(input_images)
+        actions = self.body(output)
+        return actions.data.numpy()
+
+
+
+
 # Deep Q-Learning implementation
