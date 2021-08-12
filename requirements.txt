@@ -2,7 +2,7 @@
 numpy
 matplotlib
 kivy
-gym
+gym==0.9.3
 gym-pull
 scipy
 # This configuration of pytorch is for CUDA 11.0

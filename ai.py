@@ -5,9 +5,11 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 import gym
-
+import gym_pull
 
 # Building the AI
+import image_preprocessing
+
 
 def get_gpu():
     if torch.cuda.is_available():
@@ -60,7 +62,7 @@ class SoftmaxBody(nn.Module):
 
     # Outputs from the neural network
     def forward(self, outputs):
-        probabilities = F.softmax(outputs*self.temperature)
+        probabilities = F.softmax(outputs * self.temperature)
         actions = probabilities.multinomial(0)
         return actions
 
@@ -77,6 +79,9 @@ class AI:
         return actions.data.numpy()
 
 
-
-
 # Deep Q-Learning implementation
+# Only required once, envs will be loaded with import gym_pull afterwards
+gym_pull.pull('github.com/ppaquette/gym-doom')
+doom_env = gym.make('ppaquette/DoomCorridor-v0')
+doom_env = image_preprocessing.PreprocessImage(doom_env, width=80, height=80, grayscale=True)
+doom_env = gym.wrappers.Monitor(doom_env, "videos", force=True)
