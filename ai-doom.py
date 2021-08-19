@@ -1,14 +1,15 @@
+import vizdoom as viz
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-import gym
-import gym_pull
-
 # Building the AI
-import image_preprocessing_original
+# import image_preprocessing
+
+#TODO: Own experience replay
+#TODO: Image pre-processing to fit the network
 
 
 def get_gpu():
@@ -79,9 +80,43 @@ class AI:
         return actions.data.numpy()
 
 
-# Deep Q-Learning implementation
-# Only required once, envs will be loaded with import gym_pull afterwards
-gym_pull.pull('github.com/ppaquette/gym-doom')
-doom_env = gym.make('ppaquette/DoomCorridor-v0')
-doom_env = image_preprocessing_original.PreprocessImage(doom_env, width=80, height=80, grayscale=True)
-doom_env = gym.wrappers.Monitor(doom_env, "videos", force=True)
+def eligibility_trace(batch):
+    gamma = 0.99
+    inputs = []
+    targets = []
+    for series in batch:
+        input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
+
+
+if __name__ == '__main__':
+    game = viz.DoomGame()
+    game.load_config("scenarios/deadly_corridor.cfg")
+    game.init()
+
+    game.add_available_button(viz.Button.MOVE_LEFT)
+    game.add_available_button(viz.Button.MOVE_RIGHT)
+    game.add_available_button(viz.Button.ATTACK)
+    game.add_available_button(viz.Button.MOVE_FORWARD)
+    game.add_available_button(viz.Button.MOVE_BACKWARD)
+    game.add_available_button(viz.Button.TURN_LEFT)
+    game.add_available_button(viz.Button.TURN_RIGHT)
+
+    actions = []
+    for i in range(0, 7):
+        actions.append([True if action_index == i else False for action_index in range(0, 7)])
+
+    number_actions = len(actions)
+    print("DONE")
+# # Getting the Doom environment
+# doom_env = image_preprocessing.PreprocessImage(SkipWrapper(4)(ToDiscrete("minimal")(gym.make("ppaquette/DoomCorridor-v0"))), width = 80, height = 80, grayscale = True)
+# doom_env = gym.wrappers.Monitor(doom_env, "videos", force = True)
+# number_actions = doom_env.action_space.n
+#
+# # Building an AI
+# cnn = CNN(number_actions)
+# softmax_body = SoftmaxBody(T = 1.0)
+# ai = AI(brain = cnn, body = softmax_body)
+#
+# # Setting up Experience Replay
+# n_steps = experience_replay.NStepProgress(env = doom_env, ai = ai, n_step = 10)
+# memory = experience_replay.ReplayMemory(n_steps = n_steps, capacity = 10000)

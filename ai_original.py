@@ -16,7 +16,7 @@ from gym.wrappers import SkipWrapper
 from ppaquette_gym_doom.wrappers.action_space import ToDiscrete
 
 # Importing the other Python files
-import experience_replay, image_preprocessing
+import experience_replay_original, image_preprocessing_original
 
 
 
@@ -82,7 +82,7 @@ class AI:
 # Part 2 - Training the AI with Deep Convolutional Q-Learning
 
 # Getting the Doom environment
-doom_env = image_preprocessing.PreprocessImage(SkipWrapper(4)(ToDiscrete("minimal")(gym.make("ppaquette/DoomCorridor-v0"))), width = 80, height = 80, grayscale = True)
+doom_env = image_preprocessing_original.PreprocessImage(SkipWrapper(4)(ToDiscrete("minimal")(gym.make("ppaquette/DoomCorridor-v0"))), width = 80, height = 80, grayscale = True)
 doom_env = gym.wrappers.Monitor(doom_env, "videos", force = True)
 number_actions = doom_env.action_space.n
 
@@ -92,8 +92,8 @@ softmax_body = SoftmaxBody(T = 1.0)
 ai = AI(brain = cnn, body = softmax_body)
 
 # Setting up Experience Replay
-n_steps = experience_replay.NStepProgress(env = doom_env, ai = ai, n_step = 10)
-memory = experience_replay.ReplayMemory(n_steps = n_steps, capacity = 10000)
+n_steps = experience_replay_original.NStepProgress(env = doom_env, ai = ai, n_step = 10)
+memory = experience_replay_original.ReplayMemory(n_steps = n_steps, capacity = 10000)
     
 # Implementing Eligibility Trace
 def eligibility_trace(batch):
