@@ -4,12 +4,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from time import sleep
 
 # Building the AI
-# import image_preprocessing
+import image_preprocessing
 
 #TODO: Own experience replay
-#TODO: Image pre-processing to fit the network
 
 
 def get_gpu():
@@ -106,6 +106,14 @@ if __name__ == '__main__':
         actions.append([True if action_index == i else False for action_index in range(0, 7)])
 
     number_actions = len(actions)
+
+    episodes = 1
+    for i in range(episodes):
+        game.new_episode()
+        while not game.is_episode_finished():
+            state = game.get_state()
+            buffer = state.screen_buffer
+            image_preprocessing.process_image_to_grayscale(buffer, 80, 80)
     print("DONE")
 # # Getting the Doom environment
 # doom_env = image_preprocessing.PreprocessImage(SkipWrapper(4)(ToDiscrete("minimal")(gym.make("ppaquette/DoomCorridor-v0"))), width = 80, height = 80, grayscale = True)
