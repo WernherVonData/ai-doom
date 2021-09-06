@@ -4,12 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from time import sleep
-
-# Building the AI
-import image_preprocessing
-
-#TODO: Own experience replay
+import torch.optim as optim
+import experience_replay
 
 
 def get_gpu():
@@ -64,7 +60,7 @@ class SoftmaxBody(nn.Module):
     # Outputs from the neural network
     def forward(self, outputs):
         probabilities = F.softmax(outputs * self.temperature)
-        actions = probabilities.multinomial(0)
+        actions = probabilities.multinomial(1)
         return actions
 
 
@@ -80,12 +76,39 @@ class AI:
         return actions.data.numpy()
 
 
-def eligibility_trace(batch):
+def eligibility_trace(cnn, batch):
     gamma = 0.99
     inputs = []
     targets = []
     for series in batch:
         input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
+        output = cnn(input)
+        cumul_reward = 0.0 if series[-1].done else output[1].data.max()
+        for step in reversed(series[:-1]):
+            cumul_reward = step.reward + gamma * cumul_reward
+        state = series[0].state
+        target = output[0].data
+        target[series[0].action] = cumul_reward
+        inputs.append(state)
+        targets.append(target)
+    return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.stack(targets)
+
+
+class MA:
+    def __init__(self, size):
+        self.list_of_rewards = []
+        self.size = size
+
+    def add(self, rewards):
+        if isinstance(rewards, list):
+            self.list_of_rewards += rewards
+        else:
+            self.list_of_rewards.append(rewards)
+        while len(self.list_of_rewards) > self.size:
+            del self.list_of_rewards[0]
+
+    def average(self):
+        return np.mean(self.list_of_rewards)
 
 
 if __name__ == '__main__':
@@ -101,30 +124,62 @@ if __name__ == '__main__':
     game.add_available_button(viz.Button.TURN_LEFT)
     game.add_available_button(viz.Button.TURN_RIGHT)
 
+    game.set_window_visible(False)
+
     actions = []
     for i in range(0, 7):
         actions.append([True if action_index == i else False for action_index in range(0, 7)])
 
     number_actions = len(actions)
+    cnn = CNN(number_actions)
+    softmax_body = SoftmaxBody(temperature=1.0)
+    ai = AI(brain=cnn, body=softmax_body)
 
-    episodes = 1
-    for i in range(episodes):
-        game.new_episode()
-        while not game.is_episode_finished():
-            state = game.get_state()
-            buffer = state.screen_buffer
-            image_preprocessing.process_image_to_grayscale(buffer, 80, 80)
-    print("DONE")
-# # Getting the Doom environment
-# doom_env = image_preprocessing.PreprocessImage(SkipWrapper(4)(ToDiscrete("minimal")(gym.make("ppaquette/DoomCorridor-v0"))), width = 80, height = 80, grayscale = True)
-# doom_env = gym.wrappers.Monitor(doom_env, "videos", force = True)
-# number_actions = doom_env.action_space.n
-#
-# # Building an AI
-# cnn = CNN(number_actions)
-# softmax_body = SoftmaxBody(T = 1.0)
-# ai = AI(brain = cnn, body = softmax_body)
-#
-# # Setting up Experience Replay
-# n_steps = experience_replay.NStepProgress(env = doom_env, ai = ai, n_step = 10)
-# memory = experience_replay.ReplayMemory(n_steps = n_steps, capacity = 10000)
+    n_steps = experience_replay.NStepProgress(game=game, ai=ai, n_step=10)
+    memory = experience_replay.ReplayMemory(n_steps=n_steps, capacity=10000)
+
+    ma = MA(100)
+
+    # Training the AI
+    loss = nn.MSELoss()
+    optimizer = optim.Adam(cnn.parameters(), lr=0.001)
+    nb_epochs = 100
+    for epoch in range(1, nb_epochs+1):
+        memory.run_steps(200)
+        for batch in memory.sample_batch(128):
+            inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
+            inputs, tagets = Variable(inputs), Variable(targets)
+            predictions = cnn(inputs)
+            loss_error = loss(predictions, targets)
+            optimizer.zero_grad()
+            loss_error.backward()
+            optimizer.step()
+        rewards_steps = n_steps.rewards_steps()
+        ma.add(rewards_steps)
+        avg_reward = ma.average()
+        print("Epoch {}, average reward: {}".format(epoch, avg_reward))
+
+    # sleep_time = 1.0 / viz.DEFAULT_TICRATE  # = 0.028
+    # episodes = 1
+    # for i in range(episodes):
+    #     game.new_episode()
+    #     while not game.is_episode_finished():
+    #         state = game.get_state()
+    #         buffer = state.screen_buffer
+    #         vars = state.game_variables
+    #
+    #         r = game.make_action(choice(actions))
+    #
+    #         print("State #" + str(i))
+    #         print("Game variables:", vars)
+    #         print("Reward:", r)
+    #         print("=====================")
+    #
+    #         if sleep_time > 0:
+    #             sleep(sleep_time)
+    #
+    #     # Check how the episode went.
+    #     print("Episode finished.")
+    #     print("Total reward:", game.get_total_reward())
+    #     print("************************")
+    # print("DONE")

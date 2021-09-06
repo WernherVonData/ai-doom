@@ -92,9 +92,10 @@ softmax_body = SoftmaxBody(T = 1.0)
 ai = AI(brain = cnn, body = softmax_body)
 
 # Setting up Experience Replay
-n_steps = experience_replay_original.NStepProgress(env = doom_env, ai = ai, n_step = 10)
-memory = experience_replay_original.ReplayMemory(n_steps = n_steps, capacity = 10000)
-    
+n_steps = experience_replay_original.NStepProgress(env=doom_env, ai=ai, n_step=10)
+memory = experience_replay_original.ReplayMemory(n_steps=n_steps, capacity=10000)
+
+
 # Implementing Eligibility Trace
 def eligibility_trace(batch):
     gamma = 0.99
