@@ -194,6 +194,7 @@ if __name__ == '__main__':
     memory = Memory(capacity=10000)
     reward = 0.0
     history_reward = []
+    avg_history_reward = []
     history = deque()
     replay_memory_tuple_size = 15
     while training_not_finished:
@@ -233,13 +234,19 @@ if __name__ == '__main__':
                     rewards = []
                     ma.add(rewards_steps)
                     avg_reward = ma.average()
+                    avg_history_reward.append(avg_reward)
                     print("Epoch {}, average reward: {}".format(epoch, avg_reward))
                     if epoch % 10 == 0:
                         model_file = "results\cnn_doom_"+str(epoch)+".pth"
                         score_file = "results\scores_" + str(epoch) + ".png"
+                        avg_score_file = "results\\avg_scores_" + str(epoch) + ".png"
                         print("Saving model file: {} and diagram: {}".format(model_file, score_file))
+                        plt.clf()
                         plt.plot(history_reward, color='blue')
                         plt.savefig(score_file)
+                        plt.clf()
+                        plt.plot(avg_history_reward, color='green')
+                        plt.savefig(avg_score_file)
                         save(model_file, cnn, optimizer)
                     epoch += 1
 
