@@ -25,11 +25,16 @@ class NStepProgress:
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, 80, 80)
             action = self.ai(np.array([img]))[0][0]
+            print("Action: ", action)
             r = self.game.make_action([action])
             reward += r
             history.append(Step(state=img, action=action, reward=r, done=self.game.is_episode_finished()))
-            if sleep_time > 0:
-                sleep(sleep_time)
+            print("State #" + str(state.number))
+            print("Game variables:", state.game_variables)
+            print("Reward:", r)
+            print("=====================")
+            # if sleep_time > 0:
+            #     sleep(sleep_time)
             while len(history) > self.n_step+1:
                 yield tuple(history)
             if self.game.is_episode_finished():
