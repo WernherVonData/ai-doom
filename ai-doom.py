@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 
 Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
-image_dim = 256
+image_dim = 100
+
 
 def get_gpu():
     if torch.cuda.is_available():
@@ -33,9 +34,9 @@ class CNN(nn.Module):
         self.convolution1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5)
         self.convolution2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
         self.convolution3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2)
-        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=40)
-        # self.fc11 = nn.Linear(in_features=50, out_features=50)
-        self.fc2 = nn.Linear(in_features=40, out_features=number_actions)
+        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=25)
+        self.fc11 = nn.Linear(in_features=25, out_features=25)
+        self.fc2 = nn.Linear(in_features=25, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height
@@ -55,7 +56,7 @@ class CNN(nn.Module):
         x = F.relu(F.max_pool2d(self.convolution3(x), 3, 2))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
-        # x = F.relu(self.fc11(x))
+        x = F.relu(self.fc11(x))
         return self.fc2(x)
 
 
@@ -174,7 +175,7 @@ if __name__ == '__main__':
     # game.set_render_hud(False)
     # game.set_episode_timeout(100)
     # game.set_living_reward(1)
-    # game.set_episode_start_time(5)
+    game.set_episode_start_time(5)
     # game.set_doom_skill(2)
 
     actions = []
@@ -204,12 +205,14 @@ if __name__ == '__main__':
     avg_history_reward = []
     history = deque()
     n_step = 10
+    game.new_episode()
     for epoch in range(1, nb_epochs + 1):
-        game.new_episode()
+        if game.is_episode_finished():
+            game.new_episode()
         histories = []
         history = deque()
         reward = 0.0
-        while len(histories) < 200:
+        while True:
             state = game.get_state()
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
@@ -231,6 +234,8 @@ if __name__ == '__main__':
                 reward = 0.0
                 game.new_episode()
                 history.clear()
+            if len(histories) >= 200:
+                break
         for history in histories:
             memory.append_memory(history)
         for batch in memory.sample_batch(128):
