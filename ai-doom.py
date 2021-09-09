@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
-image_dim = 80
+image_dim = 256
 
 def get_gpu():
     if torch.cuda.is_available():
@@ -33,9 +33,9 @@ class CNN(nn.Module):
         self.convolution1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5)
         self.convolution2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
         self.convolution3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2)
-        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=30)
-        self.fc11 = nn.Linear(in_features=30, out_features=30)
-        self.fc2 = nn.Linear(in_features=30, out_features=number_actions)
+        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=40)
+        # self.fc11 = nn.Linear(in_features=50, out_features=50)
+        self.fc2 = nn.Linear(in_features=40, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height
@@ -55,7 +55,7 @@ class CNN(nn.Module):
         x = F.relu(F.max_pool2d(self.convolution3(x), 3, 2))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc11(x))
+        # x = F.relu(self.fc11(x))
         return self.fc2(x)
 
 
@@ -68,7 +68,7 @@ class SoftmaxBody(nn.Module):
     # Outputs from the neural network
     def forward(self, outputs):
         probabilities = F.softmax(outputs * self.temperature, dim=len(outputs))
-        actions = probabilities.multinomial(num_samples=len(outputs))
+        actions = probabilities.multinomial(num_samples=1)
         return actions
 
 
@@ -130,15 +130,11 @@ class Memory:
         :param batch_size: batch size
         :return: iterator returning random batches
         """
-        ofs = 0
         vals = list(self.buffer)
         np.random.shuffle(vals)
         if len(self.buffer) >= batch_size:
             return [vals[-batch_size:]]
         return []
-        # while (ofs+1)*batch_size <= len(self.buffer):
-        #     yield vals[ofs*batch_size:(ofs+1)*batch_size]
-        #     ofs += 1
 
     def append_memory(self, data):
         self.buffer.append(data)
@@ -175,8 +171,10 @@ if __name__ == '__main__':
     game.add_available_button(viz.Button.TURN_RIGHT)
 
     game.set_window_visible(True)
+    # game.set_render_hud(False)
     # game.set_episode_timeout(100)
-    # game.set_living_reward(-1)
+    # game.set_living_reward(1)
+    # game.set_episode_start_time(5)
     # game.set_doom_skill(2)
 
     actions = []
@@ -194,7 +192,7 @@ if __name__ == '__main__':
     # Training the AI
     loss = nn.MSELoss()
     optimizer = optim.Adam(cnn.parameters(), lr=0.001)
-    nb_epochs = 10000
+    nb_epochs = 500
     nb_steps = 200
     training_not_finished = True
     current_step = 0
@@ -205,62 +203,60 @@ if __name__ == '__main__':
     history_reward = []
     avg_history_reward = []
     history = deque()
-    replay_memory_tuple_size = 10
-    while training_not_finished:
-        if game.is_episode_finished():
-            game.new_episode()
-        while not game.is_episode_finished():
+    n_step = 10
+    for epoch in range(1, nb_epochs + 1):
+        game.new_episode()
+        histories = []
+        history = deque()
+        reward = 0.0
+        while len(histories) < 200:
             state = game.get_state()
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
-            action = ai(np.array([img]))
-            action_idx = action[0][0]
-            r = game.make_action(actions[action_idx])
+            action = ai(np.array([img]))[0][0]
+            r = game.make_action(actions[action])
             reward += r
-            history.append(Step(state=img, action=action_idx, reward=r, done=game.is_episode_finished()))
-            if len(history) > replay_memory_tuple_size:
-                memory.append_memory(tuple(history))
-                history = deque()
-            current_step += 1
-            rewards.append(r)
-            history_reward.append(r)
-            if len(history_reward) >= 10000:
-                history_reward = history_reward[1:]
-            if current_step == nb_steps:
-                current_step = 0
-                # print("Current buffer size: {}".format(len(memory.buffer)))
-                optimization_happened = False
-                for batch in memory.sample_batch(32):
-                    optimization_happened = True
-                    inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
-                    inputs, targets = Variable(inputs), Variable(targets)
-                    predictions = cnn(inputs)
-                    loss_error = loss(predictions, targets)
-                    optimizer.zero_grad()
-                    loss_error.backward()
-                    optimizer.step()
-                if optimization_happened:
-                    rewards_steps = rewards
-                    rewards = []
-                    ma.add(rewards_steps)
-                    avg_reward = ma.average()
-                    avg_history_reward.append(avg_reward)
-                    print("Epoch {}, average reward: {}".format(epoch, avg_reward))
-                    if epoch % 10 == 0:
-                        model_file = "results\cnn_doom_"+str(epoch)+".pth"
-                        score_file = "results\scores_" + str(epoch) + ".png"
-                        avg_score_file = "results\\avg_scores_" + str(epoch) + ".png"
-                        print("Saving model file: {} and diagram: {}".format(model_file, score_file))
-                        plt.clf()
-                        plt.plot(history_reward, color='blue')
-                        plt.savefig(score_file)
-                        plt.clf()
-                        plt.plot(avg_history_reward, color='green')
-                        plt.savefig(avg_score_file)
-                        save(model_file, cnn, optimizer)
-                    epoch += 1
-
-            if epoch >= nb_epochs:
-                training_not_finished = False
-                game.close()
-                break
+            history.append(Step(state=img, action=action, reward=r, done=game.is_episode_finished()))
+            if len(history) > n_step + 1:
+                history.popleft()
+            if len(history) == n_step + 1:
+                histories.append(tuple(history))
+            if game.is_episode_finished():
+                if len(history) > n_step + 1:
+                    history.popleft()
+                while len(history) >= 1:
+                    histories.append(tuple(history))
+                    history.popleft()
+                rewards.append(reward)
+                reward = 0.0
+                game.new_episode()
+                history.clear()
+        for history in histories:
+            memory.append_memory(history)
+        for batch in memory.sample_batch(128):
+            inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
+            inputs, targets = Variable(inputs), Variable(targets)
+            predictions = cnn(inputs)
+            loss_error = loss(predictions, targets)
+            optimizer.zero_grad()
+            loss_error.backward()
+            optimizer.step()
+        rewards_steps = rewards
+        history_reward = history_reward + rewards
+        rewards = []
+        ma.add(rewards_steps)
+        avg_reward = ma.average()
+        avg_history_reward.append(avg_reward)
+        print("Epoch: %s, Average Reward: %s" % (str(epoch), str(avg_reward)))
+        if epoch % 10 == 0:
+            model_file = "results\cnn_doom_" + str(epoch) + ".pth"
+            score_file = "results\scores_" + str(epoch) + ".png"
+            avg_score_file = "results\\avg_scores_" + str(epoch) + ".png"
+            print("Saving model file: {} and diagram: {}".format(model_file, score_file))
+            plt.clf()
+            plt.plot(history_reward, color='blue')
+            plt.savefig(score_file)
+            plt.clf()
+            plt.plot(avg_history_reward, color='green')
+            plt.savefig(avg_score_file)
+            save(model_file, cnn, optimizer)
