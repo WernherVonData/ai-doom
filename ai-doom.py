@@ -31,12 +31,11 @@ class CNN(nn.Module):
         # We will work with black and white images
         # Out channels - number of features we want to detect
         # mean the number of images with applied convolution
-        self.convolution1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5)
-        self.convolution2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
-        self.convolution3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2)
-        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=25)
-        self.fc11 = nn.Linear(in_features=25, out_features=25)
-        self.fc2 = nn.Linear(in_features=25, out_features=number_actions)
+        self.convolution1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=5)
+        self.convolution2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3)
+        self.convolution3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=2)
+        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=80)
+        self.fc2 = nn.Linear(in_features=80, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height
@@ -56,7 +55,6 @@ class CNN(nn.Module):
         x = F.relu(F.max_pool2d(self.convolution3(x), 3, 2))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc11(x))
         return self.fc2(x)
 
 
@@ -131,11 +129,17 @@ class Memory:
         :param batch_size: batch size
         :return: iterator returning random batches
         """
+        # vals = list(self.buffer)
+        # np.random.shuffle(vals)
+        # if len(self.buffer) >= batch_size:
+        #     return [vals[-batch_size:]]
+        # return []
+        ofs = 0
         vals = list(self.buffer)
         np.random.shuffle(vals)
-        if len(self.buffer) >= batch_size:
-            return [vals[-batch_size:]]
-        return []
+        while (ofs + 1) * batch_size <= len(self.buffer):
+            yield vals[ofs * batch_size:(ofs + 1) * batch_size]
+            ofs += 1
 
     def append_memory(self, data):
         self.buffer.append(data)
@@ -163,26 +167,25 @@ if __name__ == '__main__':
     game.load_config("scenarios/deadly_corridor.cfg")
     game.init()
 
-    game.add_available_button(viz.Button.MOVE_LEFT)
-    game.add_available_button(viz.Button.MOVE_RIGHT)
-    game.add_available_button(viz.Button.ATTACK)
-    game.add_available_button(viz.Button.MOVE_FORWARD)
-    game.add_available_button(viz.Button.MOVE_BACKWARD)
-    game.add_available_button(viz.Button.TURN_LEFT)
-    game.add_available_button(viz.Button.TURN_RIGHT)
+    # game.add_available_button(viz.Button.MOVE_LEFT)
+    # game.add_available_button(viz.Button.MOVE_RIGHT)
+    # game.add_available_button(viz.Button.ATTACK)
+    # game.add_available_button(viz.Button.MOVE_FORWARD)
+    # game.add_available_button(viz.Button.MOVE_BACKWARD)
+    # game.add_available_button(viz.Button.TURN_LEFT)
+    # game.add_available_button(viz.Button.TURN_RIGHT)
 
     game.set_window_visible(True)
     # game.set_render_hud(False)
     # game.set_episode_timeout(100)
     # game.set_living_reward(1)
-    game.set_episode_start_time(5)
+    # game.set_episode_start_time(5)
     # game.set_doom_skill(2)
 
     actions = []
     nb_available_buttons = 7
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
-    # actions.append([False, False, False, False, False, False, False])
     number_actions = len(actions)
     cnn = CNN(number_actions)
     softmax_body = SoftmaxBody(temperature=1.0)
@@ -193,13 +196,10 @@ if __name__ == '__main__':
     # Training the AI
     loss = nn.MSELoss()
     optimizer = optim.Adam(cnn.parameters(), lr=0.001)
-    nb_epochs = 500
+    nb_epochs = 100
     nb_steps = 200
-    training_not_finished = True
-    current_step = 0
     rewards = []
-    epoch = 1
-    memory = Memory(capacity=10000)
+    memory = Memory(capacity=15000)
     reward = 0.0
     history_reward = []
     avg_history_reward = []
