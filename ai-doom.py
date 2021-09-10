@@ -9,6 +9,8 @@ import os
 from collections import deque, namedtuple
 import image_preprocessing
 import matplotlib.pyplot as plt
+from random import choice
+import datetime
 
 Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
@@ -19,10 +21,12 @@ print(f"CUDA version: {torch.version.cuda}")
 
 # Storing ID of current CUDA device
 cuda_id = torch.cuda.current_device()
-print(f"ID of current CUDA device:{torch.cuda.current_device()}")
+print(f"ID of current CUDA device: {torch.cuda.current_device()}")
 
-print(f"Name of current CUDA device:{torch.cuda.get_device_name(cuda_id)}")
+print(f"Name of current CUDA device: {torch.cuda.get_device_name(cuda_id)}")
 
+# Making the code device-agnostic
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class CNN(nn.Module):
 
@@ -77,10 +81,10 @@ class AI:
         self.body = body
 
     def __call__(self, inputs):
-        input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32)))
+        input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32))).to(device)
         output = self.brain(input_images)
         actions = self.body(output)
-        return actions.data.numpy()
+        return actions.data.cpu().numpy()
 
 
 def eligibility_trace(cnn, batch):
@@ -89,7 +93,7 @@ def eligibility_trace(cnn, batch):
     targets = []
     for series in batch:
         input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
-        output = cnn(input)
+        output = cnn(input.to(device))
         cumul_reward = 0.0 if series[-1].done else output[1].data.max()
         for step in reversed(series[:-1]):
             cumul_reward = step.reward + gamma * cumul_reward
@@ -118,7 +122,7 @@ class MA:
         return np.mean(self.list_of_rewards)
 
 
-class Memory:
+class ReplayMemory:
     def __init__(self, capacity=10000):
         self.capacity = capacity
         self.buffer = deque()
@@ -129,11 +133,6 @@ class Memory:
         :param batch_size: batch size
         :return: iterator returning random batches
         """
-        # vals = list(self.buffer)
-        # np.random.shuffle(vals)
-        # if len(self.buffer) >= batch_size:
-        #     return [vals[-batch_size:]]
-        # return []
         ofs = 0
         vals = list(self.buffer)
         np.random.shuffle(vals)
@@ -145,6 +144,9 @@ class Memory:
         self.buffer.append(data)
         while len(self.buffer) > self.capacity:
             self.buffer.popleft()
+
+    def is_buffer_full(self):
+        return len(self.buffer) >= self.capacity
 
 
 def save(filename, model, optimizer):
@@ -188,6 +190,7 @@ if __name__ == '__main__':
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
     cnn = CNN(number_actions)
+    cnn.to(device)
     softmax_body = SoftmaxBody(temperature=1.0)
     ai = AI(brain=cnn, body=softmax_body)
 
@@ -199,14 +202,16 @@ if __name__ == '__main__':
     nb_epochs = 250
     nb_steps = 200
     rewards = []
-    memory = Memory(capacity=10000)
+    memory = ReplayMemory(capacity=10000)
     reward = 0.0
     history_reward = []
     avg_history_reward = []
     history = deque()
     n_step = 10
+    batch_size = 64
     game.new_episode()
-    for epoch in range(1, nb_epochs + 1):
+    epoch = 1
+    while True:
         if game.is_episode_finished():
             game.new_episode()
         histories = []
@@ -216,43 +221,50 @@ if __name__ == '__main__':
             state = game.get_state()
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
-            action = ai(np.array([img]))[0][0]
+            action = ai(np.array([img]))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
             reward += r
             history.append(Step(state=img, action=action, reward=r, done=game.is_episode_finished()))
             if len(history) > n_step + 1:
                 history.popleft()
-            if len(history) == n_step + 1:
+            if len(history) == n_step + 1:# and len(histories) < nb_steps:
                 histories.append(tuple(history))
             if game.is_episode_finished():
                 if len(history) > n_step + 1:
                     history.popleft()
-                while len(history) >= 1:
+                while len(history) >= 1:# and len(histories) < nb_steps:
                     histories.append(tuple(history))
                     history.popleft()
                 rewards.append(reward)
                 reward = 0.0
                 game.new_episode()
                 history.clear()
-            if len(histories) >= 200:
+            if len(histories) >= nb_steps:
                 break
         for history in histories:
             memory.append_memory(history)
-        for batch in memory.sample_batch(128):
+        if not memory.is_buffer_full():
+            print("Memory not full: {} from {}".format(len(memory.buffer), memory.capacity))
+            continue
+        start = datetime.datetime.now()
+        for batch in memory.sample_batch(batch_size):
             inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
-            inputs, targets = Variable(inputs), Variable(targets)
+            inputs, targets = Variable(inputs).to(device), Variable(targets)
             predictions = cnn(inputs)
             loss_error = loss(predictions, targets)
             optimizer.zero_grad()
             loss_error.backward()
             optimizer.step()
+        stop = datetime.datetime.now()
+        delta = stop - start
         rewards_steps = rewards
         history_reward = history_reward + rewards
         rewards = []
         ma.add(rewards_steps)
         avg_reward = ma.average()
         avg_history_reward.append(avg_reward)
-        print("Epoch: %s, Average Reward: %s" % (str(epoch), str(avg_reward)))
+        print("Epoch: %s, Average Reward: %s Delta: %f" % (str(epoch), str(avg_reward), delta.seconds))
+        epoch += 1
         if epoch % 10 == 0:
             model_file = "results\cnn_doom_" + str(epoch) + ".pth"
             score_file = "results\scores_" + str(epoch) + ".png"
@@ -265,3 +277,6 @@ if __name__ == '__main__':
             plt.plot(avg_history_reward, color='green')
             plt.savefig(avg_score_file)
             save(model_file, cnn, optimizer)
+        if epoch == nb_epochs:
+            print("Reached last epoch, finishing...")
+            break
