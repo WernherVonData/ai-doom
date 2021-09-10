@@ -9,6 +9,8 @@ import os
 from collections import deque, namedtuple
 import image_preprocessing
 import matplotlib.pyplot as plt
+from random import choice
+import datetime
 
 Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
@@ -120,7 +122,7 @@ class MA:
         return np.mean(self.list_of_rewards)
 
 
-class Memory:
+class ReplayMemory:
     def __init__(self, capacity=10000):
         self.capacity = capacity
         self.buffer = deque()
@@ -142,6 +144,9 @@ class Memory:
         self.buffer.append(data)
         while len(self.buffer) > self.capacity:
             self.buffer.popleft()
+
+    def is_buffer_full(self):
+        return len(self.buffer) >= self.capacity
 
 
 def save(filename, model, optimizer):
@@ -197,14 +202,16 @@ if __name__ == '__main__':
     nb_epochs = 250
     nb_steps = 200
     rewards = []
-    memory = Memory(capacity=10000)
+    memory = ReplayMemory(capacity=10000)
     reward = 0.0
     history_reward = []
     avg_history_reward = []
     history = deque()
     n_step = 10
+    batch_size = 64
     game.new_episode()
-    for epoch in range(1, nb_epochs + 1):
+    epoch = 1
+    while True:
         if game.is_episode_finished():
             game.new_episode()
         histories = []
@@ -214,29 +221,33 @@ if __name__ == '__main__':
             state = game.get_state()
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
-            action = ai(np.array([img]))[0][0]
+            action = ai(np.array([img]))[0][0] if memory.is_buffer_full() else choice(range(0, 7))
             r = game.make_action(actions[action])
             reward += r
             history.append(Step(state=img, action=action, reward=r, done=game.is_episode_finished()))
             if len(history) > n_step + 1:
                 history.popleft()
-            if len(history) == n_step + 1:
+            if len(history) == n_step + 1:# and len(histories) < nb_steps:
                 histories.append(tuple(history))
             if game.is_episode_finished():
                 if len(history) > n_step + 1:
                     history.popleft()
-                while len(history) >= 1:
+                while len(history) >= 1:# and len(histories) < nb_steps:
                     histories.append(tuple(history))
                     history.popleft()
                 rewards.append(reward)
                 reward = 0.0
                 game.new_episode()
                 history.clear()
-            if len(histories) >= 200:
+            if len(histories) >= nb_steps:
                 break
         for history in histories:
             memory.append_memory(history)
-        for batch in memory.sample_batch(128):
+        if not memory.is_buffer_full():
+            print("Memory not full: {} from {}".format(len(memory.buffer), memory.capacity))
+            continue
+        start = datetime.datetime.now()
+        for batch in memory.sample_batch(batch_size):
             inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
             inputs, targets = Variable(inputs).to(device), Variable(targets)
             predictions = cnn(inputs)
@@ -244,13 +255,16 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             loss_error.backward()
             optimizer.step()
+        stop = datetime.datetime.now()
+        delta = stop - start
         rewards_steps = rewards
         history_reward = history_reward + rewards
         rewards = []
         ma.add(rewards_steps)
         avg_reward = ma.average()
         avg_history_reward.append(avg_reward)
-        print("Epoch: %s, Average Reward: %s" % (str(epoch), str(avg_reward)))
+        print("Epoch: %s, Average Reward: %s Delta: %f" % (str(epoch), str(avg_reward), delta.seconds))
+        epoch += 1
         if epoch % 10 == 0:
             model_file = "results\cnn_doom_" + str(epoch) + ".pth"
             score_file = "results\scores_" + str(epoch) + ".png"
@@ -263,3 +277,6 @@ if __name__ == '__main__':
             plt.plot(avg_history_reward, color='green')
             plt.savefig(avg_score_file)
             save(model_file, cnn, optimizer)
+        if epoch == nb_epochs:
+            print("Reached last epoch, finishing...")
+            break
