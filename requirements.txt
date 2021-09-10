@@ -1,6 +1,6 @@
 # call with -f https://download.pytorch.org/whl/torch_stable.html
 numpy
-scipy
+scipy==1.1.0
 opencv-python
 # This configuration of pytorch is for CUDA 11.0
 # based on version 1.8.0 from https://pytorch.org/get-started/previous-versions/
