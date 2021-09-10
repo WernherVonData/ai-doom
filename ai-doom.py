@@ -12,30 +12,30 @@ import matplotlib.pyplot as plt
 
 Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
-image_dim = 100
+image_dim = 80
 
+print(f"Is CUDA supported by this system? {torch.cuda.is_available()}")
+print(f"CUDA version: {torch.version.cuda}")
 
-def get_gpu():
-    if torch.cuda.is_available():
-        print("Using CUDA")
-        return 1
-    print("CUDA unavailable")
-    return -1
+# Storing ID of current CUDA device
+cuda_id = torch.cuda.current_device()
+print(f"ID of current CUDA device:{torch.cuda.current_device()}")
+
+print(f"Name of current CUDA device:{torch.cuda.get_device_name(cuda_id)}")
 
 
 class CNN(nn.Module):
 
     def __init__(self, number_actions):
         super(CNN, self).__init__()
-        get_gpu()
         # We will work with black and white images
         # Out channels - number of features we want to detect
         # mean the number of images with applied convolution
-        self.convolution1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=5)
-        self.convolution2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3)
-        self.convolution3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=2)
-        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=80)
-        self.fc2 = nn.Linear(in_features=80, out_features=number_actions)
+        self.convolution1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5)
+        self.convolution2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
+        self.convolution3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2)
+        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=40)
+        self.fc2 = nn.Linear(in_features=40, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height
@@ -196,10 +196,10 @@ if __name__ == '__main__':
     # Training the AI
     loss = nn.MSELoss()
     optimizer = optim.Adam(cnn.parameters(), lr=0.001)
-    nb_epochs = 100
+    nb_epochs = 250
     nb_steps = 200
     rewards = []
-    memory = Memory(capacity=15000)
+    memory = Memory(capacity=10000)
     reward = 0.0
     history_reward = []
     avg_history_reward = []
