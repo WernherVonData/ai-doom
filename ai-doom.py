@@ -166,7 +166,7 @@ def load(self):
 
 if __name__ == '__main__':
     game = viz.DoomGame()
-    game.load_config("scenarios/deadly_corridor.cfg")
+    game.load_config("scenarios/defend_the_center.cfg")
     game.init()
 
     # game.add_available_button(viz.Button.MOVE_LEFT)
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     # game.set_doom_skill(2)
 
     actions = []
-    nb_available_buttons = 7
+    nb_available_buttons = 3
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
@@ -221,7 +221,7 @@ if __name__ == '__main__':
             state = game.get_state()
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
-            action = ai(np.array([img]))[0][0] if memory.is_buffer_full() else choice(range(0, 7))
+            action = ai(np.array([img]))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
             reward += r
             history.append(Step(state=img, action=action, reward=r, done=game.is_episode_finished()))
