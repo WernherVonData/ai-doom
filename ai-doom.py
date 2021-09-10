@@ -19,10 +19,12 @@ print(f"CUDA version: {torch.version.cuda}")
 
 # Storing ID of current CUDA device
 cuda_id = torch.cuda.current_device()
-print(f"ID of current CUDA device:{torch.cuda.current_device()}")
+print(f"ID of current CUDA device: {torch.cuda.current_device()}")
 
-print(f"Name of current CUDA device:{torch.cuda.get_device_name(cuda_id)}")
+print(f"Name of current CUDA device: {torch.cuda.get_device_name(cuda_id)}")
 
+# Making the code device-agnostic
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class CNN(nn.Module):
 
@@ -77,10 +79,10 @@ class AI:
         self.body = body
 
     def __call__(self, inputs):
-        input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32)))
+        input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32))).to(device)
         output = self.brain(input_images)
         actions = self.body(output)
-        return actions.data.numpy()
+        return actions.data.cpu().numpy()
 
 
 def eligibility_trace(cnn, batch):
@@ -89,7 +91,7 @@ def eligibility_trace(cnn, batch):
     targets = []
     for series in batch:
         input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
-        output = cnn(input)
+        output = cnn(input.to(device))
         cumul_reward = 0.0 if series[-1].done else output[1].data.max()
         for step in reversed(series[:-1]):
             cumul_reward = step.reward + gamma * cumul_reward
@@ -129,11 +131,6 @@ class Memory:
         :param batch_size: batch size
         :return: iterator returning random batches
         """
-        # vals = list(self.buffer)
-        # np.random.shuffle(vals)
-        # if len(self.buffer) >= batch_size:
-        #     return [vals[-batch_size:]]
-        # return []
         ofs = 0
         vals = list(self.buffer)
         np.random.shuffle(vals)
@@ -188,6 +185,7 @@ if __name__ == '__main__':
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
     cnn = CNN(number_actions)
+    cnn.to(device)
     softmax_body = SoftmaxBody(temperature=1.0)
     ai = AI(brain=cnn, body=softmax_body)
 
@@ -240,7 +238,7 @@ if __name__ == '__main__':
             memory.append_memory(history)
         for batch in memory.sample_batch(128):
             inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
-            inputs, targets = Variable(inputs), Variable(targets)
+            inputs, targets = Variable(inputs).to(device), Variable(targets)
             predictions = cnn(inputs)
             loss_error = loss(predictions, targets)
             optimizer.zero_grad()
