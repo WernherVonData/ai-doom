@@ -166,7 +166,7 @@ def load(self):
 
 if __name__ == '__main__':
     game = viz.DoomGame()
-    game.load_config("scenarios/defend_the_center.cfg")
+    game.load_config("scenarios/deadly_corridor.cfg")
     game.init()
 
     # game.add_available_button(viz.Button.MOVE_LEFT)
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     # game.set_doom_skill(2)
 
     actions = []
-    nb_available_buttons = 3
+    nb_available_buttons = 7
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
