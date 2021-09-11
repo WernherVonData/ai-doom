@@ -14,8 +14,6 @@ import datetime
 
 Step = namedtuple('Step', ['state', 'health', 'action', 'reward', 'done'])
 
-image_dim = 80
-
 print(f"Is CUDA supported by this system? {torch.cuda.is_available()}")
 print(f"CUDA version: {torch.version.cuda}")
 
@@ -30,7 +28,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class CNN(nn.Module):
 
-    def __init__(self, number_actions):
+    def __init__(self, number_actions, image_dim):
         super(CNN, self).__init__()
         # We will work with black and white images
         # Out channels - number of features we want to detect
@@ -91,8 +89,7 @@ class AI:
         return actions.data.cpu().numpy()
 
 
-def eligibility_trace(cnn, batch):
-    gamma = 0.99
+def eligibility_trace(cnn, batch, gamma=0.99):
     inputs = []
     inputs_hp = []
     targets = []
@@ -155,6 +152,7 @@ class ReplayMemory:
             self.buffer.popleft()
 
     def is_buffer_full(self):
+        # return True
         return len(self.buffer) >= self.capacity
 
 
@@ -188,38 +186,48 @@ if __name__ == '__main__':
 
     game.set_window_visible(True)
     # game.set_render_hud(False)
-    # game.set_episode_timeout(100)
+    game.set_episode_timeout(0)
     # game.set_living_reward(1)
     # game.set_episode_start_time(5)
     # game.set_doom_skill(2)
+
+    lr = 0.001
+    nb_epochs = 100
+    nb_steps = 250
+    image_dim = 128
+    gamma = 0.99
+    memory_capacity = 10000
+    n_step = 20
+    batch_size = 32
+    temperature = 1.0
 
     actions = []
     nb_available_buttons = 7
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
-    cnn = CNN(number_actions)
+
+    cnn = CNN(number_actions=number_actions, image_dim=image_dim)
     cnn.to(device)
-    softmax_body = SoftmaxBody(temperature=1.0)
+    softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
 
     ma = MA(100)
 
     # Training the AI
     loss = nn.MSELoss()
-    optimizer = optim.Adam(cnn.parameters(), lr=0.001)
-    nb_epochs = 250
-    nb_steps = 200
+    optimizer = optim.Adam(cnn.parameters(), lr=lr)
+    memory = ReplayMemory(capacity=memory_capacity)
+
     rewards = []
-    memory = ReplayMemory(capacity=10000)
     reward = 0.0
     history_reward = []
     avg_history_reward = []
     history = deque()
-    n_step = 10
-    batch_size = 64
+
     game.new_episode()
     epoch = 1
+    previous_hp = 100
     while True:
         if game.is_episode_finished():
             game.new_episode()
@@ -231,7 +239,7 @@ if __name__ == '__main__':
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
             health = game.get_game_variable(viz.GameVariable.HEALTH)
-            action = ai(np.array([img]), healths=torch.tensor([health]).reshape((1,1)))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
+            action = ai(np.array([img]), healths=torch.tensor([health]).reshape((1, 1)))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
             reward += r
             history.append(Step(state=img, health=health, action=action, reward=r, done=game.is_episode_finished()))
@@ -258,7 +266,7 @@ if __name__ == '__main__':
             continue
         start = datetime.datetime.now()
         for batch in memory.sample_batch(batch_size):
-            inputs, healths, targets = eligibility_trace(cnn=cnn, batch=batch)
+            inputs, healths, targets = eligibility_trace(cnn=cnn, batch=batch, gamma=gamma)
             inputs, healths, targets = Variable(inputs).to(device), Variable(healths).to(device), Variable(targets)
             predictions = cnn(inputs, healths)
             loss_error = loss(predictions, targets)
