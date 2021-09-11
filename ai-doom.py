@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from random import choice
 import datetime
 
-Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
+Step = namedtuple('Step', ['state', 'health', 'action', 'reward', 'done'])
 
 image_dim = 80
 
@@ -39,7 +39,8 @@ class CNN(nn.Module):
         self.convolution2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
         self.convolution3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2)
         self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=40)
-        self.fc2 = nn.Linear(in_features=40, out_features=number_actions)
+        self.fcHealth = nn.Linear(in_features=1, out_features=20)
+        self.fc2 = nn.Linear(in_features=60, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height
@@ -53,13 +54,15 @@ class CNN(nn.Module):
         # Get neurons from all the channels and put them into the one vector
         return x.data.view(1, -1).size(1)
 
-    def forward(self, input):
-        x = F.relu(F.max_pool2d(self.convolution1(input), 3, 2))
+    def forward(self, input_img, input_hp):
+        x = F.relu(F.max_pool2d(self.convolution1(input_img), 3, 2))
         x = F.relu(F.max_pool2d(self.convolution2(x), 3, 2))
         x = F.relu(F.max_pool2d(self.convolution3(x), 3, 2))
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
-        return self.fc2(x)
+        hp = F.relu(self.fcHealth(input_hp))
+        combined = torch.cat((x, hp), dim=1)
+        return self.fc2(combined)
 
 
 class SoftmaxBody(nn.Module):
@@ -80,9 +83,10 @@ class AI:
         self.brain = brain
         self.body = body
 
-    def __call__(self, inputs):
+    def __call__(self, inputs, healths):
         input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32))).to(device)
-        output = self.brain(input_images)
+        input_hp = Variable(torch.from_numpy(np.array(healths, dtype=np.float32))).to(device)
+        output = self.brain(input_images, input_hp)
         actions = self.body(output)
         return actions.data.cpu().numpy()
 
@@ -90,19 +94,24 @@ class AI:
 def eligibility_trace(cnn, batch):
     gamma = 0.99
     inputs = []
+    inputs_hp = []
     targets = []
     for series in batch:
         input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
-        output = cnn(input.to(device))
+        input_hp = torch.from_numpy(np.array([series[0].health, series[-1].health], dtype=np.float32))
+        input_hp = input_hp.reshape((len(input_hp), 1))
+        output = cnn(input.to(device), input_hp.to(device))
         cumul_reward = 0.0 if series[-1].done else output[1].data.max()
         for step in reversed(series[:-1]):
             cumul_reward = step.reward + gamma * cumul_reward
         state = series[0].state
+        hp = series[0].health
         target = output[0].data
         target[series[0].action] = cumul_reward
         inputs.append(state)
+        inputs_hp.append(hp)
         targets.append(target)
-    return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.stack(targets)
+    return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.from_numpy(np.array(inputs_hp, dtype=np.float32).reshape((len(inputs_hp), 1))), torch.stack(targets)
 
 
 class MA:
@@ -221,10 +230,11 @@ if __name__ == '__main__':
             state = game.get_state()
             buffer = state.screen_buffer
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
-            action = ai(np.array([img]))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
+            health = game.get_game_variable(viz.GameVariable.HEALTH)
+            action = ai(np.array([img]), healths=torch.tensor([health]).reshape((1,1)))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
             reward += r
-            history.append(Step(state=img, action=action, reward=r, done=game.is_episode_finished()))
+            history.append(Step(state=img, health=health, action=action, reward=r, done=game.is_episode_finished()))
             if len(history) > n_step + 1:
                 history.popleft()
             if len(history) == n_step + 1:# and len(histories) < nb_steps:
@@ -248,9 +258,9 @@ if __name__ == '__main__':
             continue
         start = datetime.datetime.now()
         for batch in memory.sample_batch(batch_size):
-            inputs, targets = eligibility_trace(cnn=cnn, batch=batch)
-            inputs, targets = Variable(inputs).to(device), Variable(targets)
-            predictions = cnn(inputs)
+            inputs, healths, targets = eligibility_trace(cnn=cnn, batch=batch)
+            inputs, healths, targets = Variable(inputs).to(device), Variable(healths).to(device), Variable(targets)
+            predictions = cnn(inputs, healths)
             loss_error = loss(predictions, targets)
             optimizer.zero_grad()
             loss_error.backward()
