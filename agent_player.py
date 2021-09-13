@@ -15,8 +15,7 @@ def load(agent_file, model_used):
     if os.path.isfile(agent_file):
         print("=>loading agent")
         agent = torch.load(agent_file)
-        model = model_used.load_state_dict(agent['state_dict'])
-        return model
+        model_used.load_state_dict(agent['state_dict'])
     else:
         print("no checkpoint found...")
     return model_used
@@ -49,6 +48,7 @@ class SoftmaxBody(nn.Module):
 
 if __name__ == '__main__':
     scenario = "scenarios/basic.cfg"
+    print("=>device: {}".format(device))
 
     actions = []
     nb_available_buttons = 3
@@ -59,13 +59,14 @@ if __name__ == '__main__':
 
     cnn = cnn_agent.CNN(number_actions=nb_available_buttons, image_dim=image_dim)
     cnn = load("experiments\\basic_scenario\\basic_cnn_doom_50.pth", cnn)
+    cnn.to(device)
     softmax_body = SoftmaxBody(temperature=1.0)
     ai = AI(brain=cnn, body=softmax_body)
     game = vzd.DoomGame()
     game.load_config(scenario)
     game.init()
 
-    nb_episodes = 10
+    nb_episodes = 30
     for episode in range(1, nb_episodes+1):
         game.new_episode()
         reward = 0

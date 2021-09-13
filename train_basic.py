@@ -115,16 +115,6 @@ def save(filename, model, optimizer):
                 'optimizer': optimizer.state_dict()}, filename)
 
 
-def load(self):
-    if os.path.isfile('last_brain.pth'):
-        print("=>loading checkpoint")
-        checkpoint = torch.load('last_brain.pth')
-        self.model.load_state_dict(checkpoint['state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer'])
-    else:
-        print("no checkpoint found...")
-
-
 if __name__ == '__main__':
     game = viz.DoomGame()
     game.load_config("scenarios/basic.cfg")
