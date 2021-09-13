@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from agents import cnn_agent
 import image_preprocessing
 import numpy as np
+from time import sleep
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -65,8 +66,8 @@ if __name__ == '__main__':
     game = vzd.DoomGame()
     game.load_config(scenario)
     game.init()
-
-    nb_episodes = 30
+    sleep_time = 1.0 / vzd.DEFAULT_TICRATE  # = 0.028
+    nb_episodes = 50
     for episode in range(1, nb_episodes+1):
         game.new_episode()
         reward = 0
@@ -76,4 +77,6 @@ if __name__ == '__main__':
             img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
             action = ai(np.array([img]))[0][0]
             reward += game.make_action(actions[action])
+            if sleep_time > 0:
+                sleep(sleep_time)
         print("Episode {}, reward: {}".format(episode, reward))
