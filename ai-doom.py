@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from random import choice
 import datetime
 from agents import cnn_agent_second_input
+from utils import MemoryAverage
 
 Step = namedtuple('Step', ['state', 'health', 'action', 'reward', 'done'])
 
@@ -74,23 +75,6 @@ def eligibility_trace(cnn, batch, gamma=0.99):
         inputs_hp.append(hp)
         targets.append(target)
     return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.from_numpy(np.array(inputs_hp, dtype=np.float32).reshape((len(inputs_hp), 1))), torch.stack(targets)
-
-
-class MA:
-    def __init__(self, size):
-        self.list_of_rewards = []
-        self.size = size
-
-    def add(self, rewards):
-        if isinstance(rewards, list):
-            self.list_of_rewards += rewards
-        else:
-            self.list_of_rewards.append(rewards)
-        while len(self.list_of_rewards) > self.size:
-            del self.list_of_rewards[0]
-
-    def average(self):
-        return np.mean(self.list_of_rewards)
 
 
 class ReplayMemory:
@@ -177,7 +161,7 @@ if __name__ == '__main__':
     softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
 
-    ma = MA(100)
+    ma = MemoryAverage(100)
 
     # Training the AI
     loss = nn.MSELoss()
