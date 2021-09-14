@@ -56,9 +56,6 @@ def eligibility_trace(cnn, batch, gamma=0.99):
     return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.from_numpy(np.array(inputs_hp, dtype=np.float32).reshape((len(inputs_hp), 1))), torch.stack(targets)
 
 
-
-
-
 if __name__ == '__main__':
     game = viz.DoomGame()
     game.load_config("scenarios/deadly_corridor.cfg")
