@@ -122,7 +122,7 @@ if __name__ == '__main__':
         while True:
             state = game.get_state()
             buffer = state.screen_buffer
-            img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
+            img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             health = game.get_game_variable(viz.GameVariable.HEALTH)
             action = ai(np.array([img]), healths=torch.tensor([health]).reshape((1, 1)))[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])

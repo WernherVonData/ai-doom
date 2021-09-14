@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def process_image_to_grayscale(image, width = 64, height = 64):
+def to_grayscale_and_resize(image, width = 64, height = 64):
     img = image.copy()
     # First axis of doom screen buffer is the number of channels, while the OpenCV takes channels as the last parameter.
     img = np.moveaxis(img, 0, -1)
@@ -13,7 +13,7 @@ def process_image_to_grayscale(image, width = 64, height = 64):
     return img
 
 
-def reshape_and_scale_image(image, width = 64, height = 64):
+def to_resize(image, width = 64, height = 64):
     img = image.copy()
     # First axis of doom screen buffer is the number of channels, while the OpenCV takes channels as the last parameter.
     img = cv2.resize(img, dsize=(height, width), interpolation=cv2.INTER_CUBIC)
