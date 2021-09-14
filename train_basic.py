@@ -101,7 +101,7 @@ if __name__ == '__main__':
         while True:
             state = game.get_state()
             buffer = state.screen_buffer
-            img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
+            img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             action = ai(np.array([img]))[0][0]
             r = game.make_action(actions[action])
             reward += r

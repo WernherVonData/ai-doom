@@ -48,7 +48,7 @@ if __name__ == '__main__':
         while not game.is_episode_finished():
             state = game.get_state()
             buffer = state.screen_buffer
-            img = image_preprocessing.process_image_to_grayscale(buffer, image_dim, image_dim)
+            img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             action = ai(np.array([img]))[0][0]
             reward += game.make_action(actions[action])
             if sleep_time > 0:
