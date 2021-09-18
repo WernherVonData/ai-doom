@@ -147,7 +147,7 @@ if __name__ == '__main__':
         for history in histories:
             memory.append_memory(history)
         if not memory.is_buffer_full():
-            print("Memory not full: {} from {}".format(len(memory.buffer), memory.capacity))
+            print("Memory not full")
             continue
         start = datetime.datetime.now()
         for batch in memory.sample_batch(batch_size):

@@ -57,7 +57,7 @@ if __name__ == '__main__':
     game.set_window_visible(True)
 
     lr = 0.001
-    nb_epochs = 30
+    nb_epochs = 50
     nb_steps = 200
     image_dim = 128
     gamma = 0.99
