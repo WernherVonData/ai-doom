@@ -11,8 +11,8 @@ import datetime
 from agents import cnn_agent
 import utils
 from utils import MemoryAverage
-from softmax_body import SoftmaxBody
-from replay_memory import ReplayMemory
+from katie.rl.softmax_body import SoftmaxBody
+from katie.rl.replay_memory import ReplayMemory
 
 Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
