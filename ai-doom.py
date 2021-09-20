@@ -81,7 +81,7 @@ if __name__ == '__main__':
     nb_steps = 200
     image_dim = 128
     gamma = 0.99
-    memory_capacity = 20000
+    memory_capacity = 10000
     n_step = 10
     batch_size = 64
     temperature = 1.0
@@ -126,16 +126,24 @@ if __name__ == '__main__':
             health = game.get_game_variable(viz.GameVariable.HEALTH)
             step = state.number
             delta_hp = 100
-            if previous_hp > health:
+            if previous_hp >= health:
                 delta_hp = previous_hp - health
                 previous_hp = health
             else:
                 previous_hp = 100
             linear_input = np.array([[health, delta_hp, step]])
-            action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if True else choice(range(0, number_actions))
+            action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
-            reward += r
-            history.append(Step(state=img, linear=linear_input, action=action, reward=r, done=game.is_episode_finished()))
+            reward_to_save = 100.0 - delta_hp
+            reward += reward_to_save
+            # if r > 0:
+            #     reward += 10
+            # else:
+            #     reward -= 10
+            # if health == 0:
+            #     reward -= 100
+            # # reward += r
+            history.append(Step(state=img, linear=linear_input, action=action, reward=reward_to_save, done=game.is_episode_finished()))
             if len(history) > n_step + 1:
                 history.popleft()
             if len(history) == n_step + 1:# and len(histories) < nb_steps:
@@ -160,9 +168,9 @@ if __name__ == '__main__':
             continue
         start = datetime.datetime.now()
         for batch in memory.sample_batch(batch_size):
-            inputs, healths, targets = eligibility_trace(cnn=cnn, batch=batch, gamma=gamma)
-            inputs, healths, targets = Variable(inputs).to(utils.DEVICE_NAME), Variable(healths).to(utils.DEVICE_NAME), Variable(targets)
-            predictions = cnn(inputs, healths)
+            image_inputs, linear_inputs, targets = eligibility_trace(cnn=cnn, batch=batch, gamma=gamma)
+            image_inputs, linear_inputs, targets = Variable(image_inputs).to(utils.DEVICE_NAME), Variable(linear_inputs).to(utils.DEVICE_NAME), Variable(targets)
+            predictions = cnn(image_inputs, linear_inputs)
             loss_error = loss(predictions, targets)
             optimizer.zero_grad()
             loss_error.backward()
