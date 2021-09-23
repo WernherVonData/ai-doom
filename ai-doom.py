@@ -81,7 +81,7 @@ if __name__ == '__main__':
     nb_steps = 200
     image_dim = 128
     gamma = 0.99
-    memory_capacity = 10000
+    memory_capacity = 15000
     n_step = 10
     batch_size = 64
     temperature = 1.0
@@ -134,15 +134,16 @@ if __name__ == '__main__':
             linear_input = np.array([[health, delta_hp, step]])
             action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
-            reward_to_save = 100.0 - delta_hp
+            reward_to_save = health-delta_hp
+            if r > 0:
+                reward_to_save += 10
+            else:
+                reward_to_save -= 10
+            if health == 0:
+                reward_to_save -= 100
+
             reward += reward_to_save
-            # if r > 0:
-            #     reward += 10
-            # else:
-            #     reward -= 10
-            # if health == 0:
-            #     reward -= 100
-            # # reward += r
+            # reward += r
             history.append(Step(state=img, linear=linear_input, action=action, reward=reward_to_save, done=game.is_episode_finished()))
             if len(history) > n_step + 1:
                 history.popleft()
