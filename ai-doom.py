@@ -41,7 +41,6 @@ def eligibility_trace(cnn, batch, gamma=0.99):
     for series in batch:
         input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
         linear_input = torch.from_numpy(np.array([series[0].linear, series[-1].linear], dtype=np.float32))
-        # linear_input = linear_input.reshape((len(linear_input), 2))
         output = cnn(input.to(utils.DEVICE_NAME), linear_input.to(utils.DEVICE_NAME))
         cumul_reward = 0.0 if series[-1].done else output[1].data.max()
         for step in reversed(series[:-1]):
@@ -61,29 +60,18 @@ if __name__ == '__main__':
     game.load_config("scenarios/deadly_corridor.cfg")
     game.init()
 
-    # game.add_available_button(viz.Button.MOVE_LEFT)
-    # game.add_available_button(viz.Button.MOVE_RIGHT)
-    # game.add_available_button(viz.Button.ATTACK)
-    # game.add_available_button(viz.Button.MOVE_FORWARD)
-    # game.add_available_button(viz.Button.MOVE_BACKWARD)
-    # game.add_available_button(viz.Button.TURN_LEFT)
-    # game.add_available_button(viz.Button.TURN_RIGHT)
-
     game.set_window_visible(True)
-    # game.set_render_hud(False)
-    game.set_episode_timeout(0)
-    # game.set_living_reward(1)
-    # game.set_episode_start_time(5)
-    # game.set_doom_skill(2)
+    game.set_episode_timeout(4200)
 
     lr = 0.001
-    nb_epochs = 100
+    nb_epochs = 200
     nb_steps = 200
-    image_dim = 128
+    image_dim = 80
     gamma = 0.99
-    memory_capacity = 15000
+    memory_capacity = 25000
     n_step = 10
-    batch_size = 64
+    batch_size = int(memory_capacity*0.01)
+    print(batch_size)
     temperature = 1.0
 
     actions = []
@@ -92,7 +80,8 @@ if __name__ == '__main__':
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
 
-    cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=3)
+    cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=4)
+    cnn = utils.load("results\\cnn_doom_100.pth", cnn)
     cnn.to(utils.DEVICE_NAME)
     softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
@@ -111,11 +100,12 @@ if __name__ == '__main__':
     history = deque()
 
     game.new_episode()
-    epoch = 1
+    epoch = 101
     previous_hp = 100
     while True:
         if game.is_episode_finished():
             game.new_episode()
+            previous_hp = 100
         histories = []
         history = deque()
         reward = 0.0
@@ -125,34 +115,36 @@ if __name__ == '__main__':
             img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             health = game.get_game_variable(viz.GameVariable.HEALTH)
             step = state.number
-            delta_hp = 100
+            delta_hp = 0
             if previous_hp >= health:
                 delta_hp = previous_hp - health
                 previous_hp = health
-            else:
-                previous_hp = 100
-            linear_input = np.array([[health, delta_hp, step]])
+            linear_input = np.array([[health, previous_hp, delta_hp, step]])
             action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
-            reward_to_save = health-delta_hp
+            reward_to_save = 0
+            reward_to_save -= delta_hp
+            if health > 0:
+                reward_to_save += 15
             if r > 0:
-                reward_to_save += 10
+                reward_to_save += 5
             else:
-                reward_to_save -= 10
-            if health == 0:
-                reward_to_save -= 100
+                reward_to_save -= 5
+            if health <= 0:
+                reward_to_save -= 1000
 
             reward += reward_to_save
             # reward += r
+            # TODO: Check if it's possible to make this part purely generic
             history.append(Step(state=img, linear=linear_input, action=action, reward=reward_to_save, done=game.is_episode_finished()))
             if len(history) > n_step + 1:
                 history.popleft()
-            if len(history) == n_step + 1:# and len(histories) < nb_steps:
+            if len(history) == n_step + 1:
                 histories.append(tuple(history))
             if game.is_episode_finished():
                 if len(history) > n_step + 1:
                     history.popleft()
-                while len(history) >= 1:# and len(histories) < nb_steps:
+                while len(history) >= 1:
                     histories.append(tuple(history))
                     history.popleft()
                 rewards.append(reward)
@@ -162,6 +154,7 @@ if __name__ == '__main__':
                 previous_hp = 100
             if len(histories) >= nb_steps:
                 break
+            # TODO: End of that TODO
         for history in histories:
             memory.append_memory(history)
         if not memory.is_buffer_full():
