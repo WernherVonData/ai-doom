@@ -131,3 +131,9 @@ dmypy.json
 .idea/
 .vscode/
 _vizdoom.ini
+
+examples/
+experiments/
+original-code/
+results/
+videos/

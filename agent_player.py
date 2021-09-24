@@ -6,7 +6,7 @@ import image_preprocessing
 import numpy as np
 from time import sleep
 import utils
-from softmax_body import SoftmaxBody
+from katie.rl.softmax_body import SoftmaxBody
 
 
 class AI:
@@ -22,7 +22,7 @@ class AI:
 
 
 if __name__ == '__main__':
-    scenario = "scenarios/basic.cfg"
+    scenario = "scenarios/rocket_basic.cfg"
     print("=>device used: {}".format(utils.DEVICE_NAME))
 
     actions = []
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     image_dim = 128
 
     cnn = cnn_agent.CNN(number_actions=nb_available_buttons, image_dim=image_dim)
-    cnn = utils.load("experiments\\basic_scenario\\basic_cnn_doom_50.pth", cnn)
+    cnn = utils.load("experiments\\basic_rocket_scenario\\basic_rocket_cnn_doom_50.pth", cnn)
     cnn.to(utils.DEVICE_NAME)
     softmax_body = SoftmaxBody(temperature=1.0)
     ai = AI(brain=cnn, body=softmax_body)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         while not game.is_episode_finished():
             state = game.get_state()
             buffer = state.screen_buffer
-            img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
+            img = image_preprocessing.to_resize(buffer, image_dim, image_dim)
             action = ai(np.array([img]))[0][0]
             reward += game.make_action(actions[action])
             if sleep_time > 0:
