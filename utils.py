@@ -35,4 +35,4 @@ def load(agent_file, model_used, optimizer_used):
         optimizer_used.load_state_dict(agent['optimizer'])
     else:
         print("no checkpoint found...")
-    return model_used
+    return model_used, optimizer_used

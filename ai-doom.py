@@ -29,8 +29,8 @@ class AI:
 
     def __call__(self, image_inputs, linear_inputs):
         input_images = Variable(torch.from_numpy(np.array(image_inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
-        input_hp = Variable(torch.from_numpy(np.array(linear_inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
-        output = self.brain(input_images, input_hp)
+        linear_input = Variable(torch.from_numpy(np.array(linear_inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
+        output = self.brain(input_images, linear_input)
         actions = self.body(output)
         return actions.data.cpu().numpy()
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     lr = 0.001
     nb_epochs = 100
-    nb_steps = 200
+    nb_steps = 500
     image_dim = 80
     gamma = 0.99
     memory_capacity = 50000
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     number_actions = len(actions)
 
     cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=4)
-
+    cnn.to(utils.DEVICE_NAME)
     softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
 
@@ -102,11 +102,9 @@ if __name__ == '__main__':
     epoch = 1
     previous_hp = 100
 
-    # cnn = utils.load("results\\cnn_doom_10.pth", model_used=cnn, optimizer_used=optimizer)
-    # with open("results\\buffer_10.pickle", 'rb') as f:
+    # cnn, optimizer = utils.load("results\\cnn_doom_80.pth", model_used=cnn, optimizer_used=optimizer)
+    # with open("results\\buffer_80.pickle", 'rb') as f:
     #     memory._buffer = pickle.load(f)
-
-    cnn.to(utils.DEVICE_NAME)
 
     while True:
         if game.is_episode_finished():
