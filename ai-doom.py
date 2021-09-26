@@ -14,6 +14,7 @@ import utils
 from utils import MemoryAverage
 from katie.rl.softmax_body import SoftmaxBody
 from katie.rl.replay_memory import ReplayMemory
+import pickle
 
 Step = namedtuple('Step', ['state', 'linear', 'action', 'reward', 'done'])
 
@@ -28,8 +29,8 @@ class AI:
 
     def __call__(self, image_inputs, linear_inputs):
         input_images = Variable(torch.from_numpy(np.array(image_inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
-        input_hp = Variable(torch.from_numpy(np.array(linear_inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
-        output = self.brain(input_images, input_hp)
+        linear_input = Variable(torch.from_numpy(np.array(linear_inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
+        output = self.brain(input_images, linear_input)
         actions = self.body(output)
         return actions.data.cpu().numpy()
 
@@ -64,14 +65,13 @@ if __name__ == '__main__':
     game.set_episode_timeout(4200)
 
     lr = 0.001
-    nb_epochs = 200
-    nb_steps = 200
+    nb_epochs = 100
+    nb_steps = 500
     image_dim = 80
     gamma = 0.99
-    memory_capacity = 25000
+    memory_capacity = 50000
     n_step = 10
-    batch_size = int(memory_capacity*0.01)
-    print(batch_size)
+    batch_size = int(memory_capacity*0.02)
     temperature = 1.0
 
     actions = []
@@ -81,7 +81,6 @@ if __name__ == '__main__':
     number_actions = len(actions)
 
     cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=4)
-    cnn = utils.load("results\\cnn_doom_100.pth", cnn)
     cnn.to(utils.DEVICE_NAME)
     softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
@@ -100,8 +99,13 @@ if __name__ == '__main__':
     history = deque()
 
     game.new_episode()
-    epoch = 101
+    epoch = 1
     previous_hp = 100
+
+    # cnn, optimizer = utils.load("results\\cnn_doom_80.pth", model_used=cnn, optimizer_used=optimizer)
+    # with open("results\\buffer_80.pickle", 'rb') as f:
+    #     memory._buffer = pickle.load(f)
+
     while True:
         if game.is_episode_finished():
             game.new_episode()
@@ -180,9 +184,12 @@ if __name__ == '__main__':
         print("Epoch: %s, Average Reward: %s Delta: %f" % (str(epoch), str(avg_reward), delta.seconds))
         epoch += 1
         if epoch % 10 == 0:
-            model_file = "results\cnn_doom_" + str(epoch) + ".pth"
-            score_file = "results\scores_" + str(epoch) + ".png"
+            model_file = "results\\cnn_doom_" + str(epoch) + ".pth"
+            score_file = "results\\scores_" + str(epoch) + ".png"
             avg_score_file = "results\\avg_scores_" + str(epoch) + ".png"
+            memory_file = "results\\buffer_"+str(epoch)+".pickle"
+            with open(memory_file, 'wb') as f:
+                pickle.dump(memory._buffer, f)
             print("Saving model file: {} and diagram: {}".format(model_file, score_file))
             plt.clf()
             plt.plot(history_reward, color='blue')

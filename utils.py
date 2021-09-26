@@ -27,11 +27,12 @@ def save(filename, model, optimizer):
                 'optimizer': optimizer.state_dict()}, filename)
 
 
-def load(agent_file, model_used):
+def load(agent_file, model_used, optimizer_used):
     if os.path.isfile(agent_file):
         print("=>loading agent")
         agent = torch.load(agent_file)
         model_used.load_state_dict(agent['state_dict'])
+        optimizer_used.load_state_dict(agent['optimizer'])
     else:
         print("no checkpoint found...")
-    return model_used
+    return model_used, optimizer_used
