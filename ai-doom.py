@@ -64,14 +64,16 @@ if __name__ == '__main__':
     game.set_window_visible(True)
     game.set_episode_timeout(4200)
 
+    game.add_available_game_variable(viz.GameVariable.AMMO2)
+
     lr = 0.001
-    nb_epochs = 100
-    nb_steps = 500
+    nb_epochs = 300
+    nb_steps = 400
     image_dim = 80
     gamma = 0.99
-    memory_capacity = 50000
+    memory_capacity = 100000
     n_step = 10
-    batch_size = int(memory_capacity*0.02)
+    batch_size = 256
     temperature = 1.0
 
     actions = []
@@ -80,7 +82,7 @@ if __name__ == '__main__':
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
 
-    cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=4)
+    cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=5)
     cnn.to(utils.DEVICE_NAME)
     softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
@@ -118,24 +120,21 @@ if __name__ == '__main__':
             buffer = state.screen_buffer
             img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             health = game.get_game_variable(viz.GameVariable.HEALTH)
+            ammo = game.get_game_variable(viz.GameVariable.AMMO2)
             step = state.number
             delta_hp = 0
             if previous_hp >= health:
-                delta_hp = previous_hp - health
+                delta_hp = abs(previous_hp - health)
                 previous_hp = health
-            linear_input = np.array([[health, previous_hp, delta_hp, step]])
+            linear_input = np.array([[health, previous_hp, delta_hp, step, ammo]])
             action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
+            print(r)
             reward_to_save = 0
             reward_to_save -= delta_hp
             if health > 0:
-                reward_to_save += 15
-            if r > 0:
-                reward_to_save += 5
-            else:
-                reward_to_save -= 5
-            if health <= 0:
-                reward_to_save -= 1000
+                reward_to_save += 10
+            reward_to_save += r
 
             reward += reward_to_save
             # reward += r
