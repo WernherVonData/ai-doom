@@ -62,7 +62,7 @@ if __name__ == '__main__':
     game.init()
 
     game.set_window_visible(True)
-    game.set_episode_timeout(4200)
+    # game.set_episode_timeout(4200)
 
     game.add_available_game_variable(viz.GameVariable.AMMO2)
 
@@ -105,8 +105,7 @@ if __name__ == '__main__':
     previous_hp = 100
 
     # cnn, optimizer = utils.load("results\\cnn_doom_80.pth", model_used=cnn, optimizer_used=optimizer)
-    # with open("results\\buffer_80.pickle", 'rb') as f:
-    #     memory._buffer = pickle.load(f)
+    # memory.load_memory_buffer("results\\buffer_80.pickle")
 
     while True:
         if game.is_episode_finished():
@@ -129,7 +128,6 @@ if __name__ == '__main__':
             linear_input = np.array([[health, previous_hp, delta_hp, step, ammo]])
             action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
-            print(r)
             reward_to_save = 0
             reward_to_save -= delta_hp
             if health > 0:
@@ -161,7 +159,7 @@ if __name__ == '__main__':
         for history in histories:
             memory.append_memory(history)
         if not memory.is_buffer_full():
-            print("Memory not full")
+            print("Memory not full {} of {}".format(memory.get_current_buffer_size(), memory.get_capacity()))
             continue
         start = datetime.datetime.now()
         for batch in memory.sample_batch(batch_size):
@@ -187,9 +185,9 @@ if __name__ == '__main__':
             score_file = "results\\scores_" + str(epoch) + ".png"
             avg_score_file = "results\\avg_scores_" + str(epoch) + ".png"
             memory_file = "results\\buffer_"+str(epoch)+".pickle"
-            with open(memory_file, 'wb') as f:
-                pickle.dump(memory._buffer, f)
+            memory.save_memory_buffer(memory_file)
             print("Saving model file: {} and diagram: {}".format(model_file, score_file))
+            print(str(datetime.datetime.now()))
             plt.clf()
             plt.plot(history_reward, color='blue')
             plt.savefig(score_file)
