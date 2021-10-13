@@ -62,16 +62,18 @@ if __name__ == '__main__':
     game.init()
 
     game.set_window_visible(True)
-    game.set_episode_timeout(4200)
+    # game.set_episode_timeout(4200)
+
+    game.add_available_game_variable(viz.GameVariable.AMMO2)
 
     lr = 0.001
-    nb_epochs = 100
-    nb_steps = 500
+    nb_epochs = 300
+    nb_steps = 1000
     image_dim = 80
     gamma = 0.99
-    memory_capacity = 50000
+    memory_capacity = 100000
     n_step = 10
-    batch_size = int(memory_capacity*0.02)
+    batch_size = 128
     temperature = 1.0
 
     actions = []
@@ -102,9 +104,8 @@ if __name__ == '__main__':
     epoch = 1
     previous_hp = 100
 
-    # cnn, optimizer = utils.load("results\\cnn_doom_80.pth", model_used=cnn, optimizer_used=optimizer)
-    # with open("results\\buffer_80.pickle", 'rb') as f:
-    #     memory._buffer = pickle.load(f)
+    # cnn, optimizer = utils.load("results\\cnn_doom_70.pth", model_used=cnn, optimizer_used=optimizer)
+    # memory.load_memory_buffer("results\\buffer_70.pickle")
 
     while True:
         if game.is_episode_finished():
@@ -118,10 +119,11 @@ if __name__ == '__main__':
             buffer = state.screen_buffer
             img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             health = game.get_game_variable(viz.GameVariable.HEALTH)
+            # ammo = game.get_game_variable(viz.GameVariable.AMMO2)
             step = state.number
             delta_hp = 0
             if previous_hp >= health:
-                delta_hp = previous_hp - health
+                delta_hp = abs(previous_hp - health)
                 previous_hp = health
             linear_input = np.array([[health, previous_hp, delta_hp, step]])
             action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
@@ -129,13 +131,8 @@ if __name__ == '__main__':
             reward_to_save = 0
             reward_to_save -= delta_hp
             if health > 0:
-                reward_to_save += 15
-            if r > 0:
-                reward_to_save += 5
-            else:
-                reward_to_save -= 5
-            if health <= 0:
-                reward_to_save -= 1000
+                reward_to_save += 10
+            reward_to_save += r
 
             reward += reward_to_save
             # reward += r
@@ -162,7 +159,7 @@ if __name__ == '__main__':
         for history in histories:
             memory.append_memory(history)
         if not memory.is_buffer_full():
-            print("Memory not full")
+            print("Memory not full {} of {}".format(memory.get_current_buffer_size(), memory.get_capacity()))
             continue
         start = datetime.datetime.now()
         for batch in memory.sample_batch(batch_size):
@@ -181,15 +178,14 @@ if __name__ == '__main__':
         ma.add(rewards_steps)
         avg_reward = ma.average()
         avg_history_reward.append(avg_reward)
-        print("Epoch: %s, Average Reward: %s Delta: %f" % (str(epoch), str(avg_reward), delta.seconds))
+        print("Epoch: %s, Average Reward: %s Delta: %f Time: %s" % (str(epoch), str(avg_reward), delta.seconds, str(datetime.datetime.now())))
         epoch += 1
         if epoch % 10 == 0:
             model_file = "results\\cnn_doom_" + str(epoch) + ".pth"
             score_file = "results\\scores_" + str(epoch) + ".png"
             avg_score_file = "results\\avg_scores_" + str(epoch) + ".png"
             memory_file = "results\\buffer_"+str(epoch)+".pickle"
-            with open(memory_file, 'wb') as f:
-                pickle.dump(memory._buffer, f)
+            memory.save_memory_buffer(memory_file)
             print("Saving model file: {} and diagram: {}".format(model_file, score_file))
             plt.clf()
             plt.plot(history_reward, color='blue')

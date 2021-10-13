@@ -9,8 +9,8 @@ class CnnTwoInput(agents.cnn_agent.CNN):
 
     def __init__(self, number_actions, image_dim, linear_input):
         super(CnnTwoInput, self).__init__(number_actions, image_dim)
-        self.fcLinear = nn.Linear(in_features=linear_input, out_features=20)
-        self.fc2 = nn.Linear(in_features=60, out_features=number_actions)
+        self.fcLinear = nn.Linear(in_features=linear_input, out_features=30)
+        self.fc2 = nn.Linear(in_features=110, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height
