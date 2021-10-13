@@ -11,11 +11,11 @@ class CNN(nn.Module):
         # We will work with black and white images
         # Out channels - number of features we want to detect
         # mean the number of images with applied convolution
-        self.convolution1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5)
-        self.convolution2 = nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3)
-        self.convolution3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2)
-        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=40)
-        self.fc2 = nn.Linear(in_features=40, out_features=number_actions)
+        self.convolution1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=5)
+        self.convolution2 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3)
+        self.convolution3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=2)
+        self.fc1 = nn.Linear(in_features=self.count_neurons((1, image_dim, image_dim)), out_features=80)
+        self.fc2 = nn.Linear(in_features=80, out_features=number_actions)
 
     def count_neurons(self, image_dim):
         # 1- batch, image_dim - dimensions of the image - channels, width, height

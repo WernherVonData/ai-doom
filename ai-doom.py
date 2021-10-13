@@ -68,12 +68,12 @@ if __name__ == '__main__':
 
     lr = 0.001
     nb_epochs = 300
-    nb_steps = 400
+    nb_steps = 1000
     image_dim = 80
     gamma = 0.99
     memory_capacity = 100000
     n_step = 10
-    batch_size = 256
+    batch_size = 128
     temperature = 1.0
 
     actions = []
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
 
-    cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=5)
+    cnn = cnn_agent_second_input.CnnTwoInput(number_actions=number_actions, image_dim=image_dim, linear_input=4)
     cnn.to(utils.DEVICE_NAME)
     softmax_body = SoftmaxBody(temperature=temperature)
     ai = AI(brain=cnn, body=softmax_body)
@@ -104,8 +104,8 @@ if __name__ == '__main__':
     epoch = 1
     previous_hp = 100
 
-    # cnn, optimizer = utils.load("results\\cnn_doom_80.pth", model_used=cnn, optimizer_used=optimizer)
-    # memory.load_memory_buffer("results\\buffer_80.pickle")
+    # cnn, optimizer = utils.load("results\\cnn_doom_70.pth", model_used=cnn, optimizer_used=optimizer)
+    # memory.load_memory_buffer("results\\buffer_70.pickle")
 
     while True:
         if game.is_episode_finished():
@@ -119,13 +119,13 @@ if __name__ == '__main__':
             buffer = state.screen_buffer
             img = image_preprocessing.to_grayscale_and_resize(buffer, image_dim, image_dim)
             health = game.get_game_variable(viz.GameVariable.HEALTH)
-            ammo = game.get_game_variable(viz.GameVariable.AMMO2)
+            # ammo = game.get_game_variable(viz.GameVariable.AMMO2)
             step = state.number
             delta_hp = 0
             if previous_hp >= health:
                 delta_hp = abs(previous_hp - health)
                 previous_hp = health
-            linear_input = np.array([[health, previous_hp, delta_hp, step, ammo]])
+            linear_input = np.array([[health, previous_hp, delta_hp, step]])
             action = ai(np.array([img]), linear_inputs=linear_input)[0][0] if memory.is_buffer_full() else choice(range(0, number_actions))
             r = game.make_action(actions[action])
             reward_to_save = 0
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         ma.add(rewards_steps)
         avg_reward = ma.average()
         avg_history_reward.append(avg_reward)
-        print("Epoch: %s, Average Reward: %s Delta: %f" % (str(epoch), str(avg_reward), delta.seconds))
+        print("Epoch: %s, Average Reward: %s Delta: %f Time: %s" % (str(epoch), str(avg_reward), delta.seconds, str(datetime.datetime.now())))
         epoch += 1
         if epoch % 10 == 0:
             model_file = "results\\cnn_doom_" + str(epoch) + ".pth"
@@ -187,7 +187,6 @@ if __name__ == '__main__':
             memory_file = "results\\buffer_"+str(epoch)+".pickle"
             memory.save_memory_buffer(memory_file)
             print("Saving model file: {} and diagram: {}".format(model_file, score_file))
-            print(str(datetime.datetime.now()))
             plt.clf()
             plt.plot(history_reward, color='blue')
             plt.savefig(score_file)
