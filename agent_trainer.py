@@ -58,8 +58,8 @@ class AgentTrainer:
         :param calculate_reward: receives the reward from the game and based on that it can return own reward
         :param generate_history: generates the named tuple for the replay memory, should accept the action and information whether game is finished
         :param eligibility_trace: the eligibility trace function that work with agent given to this trainer, must accept the cnn object, batch and gamme
-        :param starting_epoch:
-        :param batch_size:
+        :param starting_epoch: epoch that we will start training
+        :param batch_size: the size of batch that will be taken from the replay memory
         :return:
         """
         game = viz.DoomGame()
