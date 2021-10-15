@@ -52,24 +52,13 @@ def read_from_arguments(args):
     return scenario_name, agent, agent_path, image_dim, nb_episodes
 
 
-def get_path_and_number_of_actions_to_scenario(scenario_name):
-    if scenario_name == "basic":
-        return "scenarios/basic.cfg", 3
-    if scenario_name == "rocket":
-        return "scenarios/rocket_basic.cfg", 3
-    if scenario_name == "corridor":
-        return "scenarios/deadly_corridor.cfg", 7
-    print("=> Scenario {} has wrong name or it's not supported yet".format(scenario_name))
-    return None, None
-
-
 def main(args):
     scenario_name, agent, agent_path, image_dim, nb_episodes = read_from_arguments(args)
     if scenario_name or agent or agent_path is None:
         raise ValueError("Scenario, agent and path to serialized agent MUST be specified")
 
     print("=>device used: {}".format(utils.DEVICE_NAME))
-    scenario, nb_available_buttons = get_path_and_number_of_actions_to_scenario(scenario_name=scenario_name)
+    scenario, nb_available_buttons = utils.get_path_and_number_of_actions_to_scenario(scenario_name=scenario_name)
     actions = []
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
