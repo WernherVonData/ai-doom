@@ -25,7 +25,7 @@ class AgentTrainer:
             self.actions.append(
                 [True if action_index == i else False for action_index in range(0, self.nb_available_buttons)])
 
-        image_dim = 80
+        self.image_dim = 80
         self.cnn = None
         self.ai = None
         self.softmax_body = SoftmaxBody(temperature=temperature)
@@ -80,8 +80,8 @@ class AgentTrainer:
             reward = 0.0
             while True:
                 state = game.get_state()
-                state_data = step_reader(state=state)
-                action = make_action(ai=self.ai, state=state_data) if self.memory.is_buffer_full() else choice(
+                state_data = step_reader(state=state, image_dim=self.image_dim)
+                action = make_action(ai=self.ai, state_data=state_data) if self.memory.is_buffer_full() else choice(
                     range(0, self.nb_available_buttons))
                 game_reward = game.make_action(self.actions[action])
                 reward += calculate_reward(game_reward=game_reward)
