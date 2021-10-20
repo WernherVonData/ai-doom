@@ -4,8 +4,6 @@ from random import choice
 
 import matplotlib.pyplot as plt
 
-from torch.autograd import Variable
-
 import vizdoom as viz
 
 import utils
@@ -20,16 +18,19 @@ class AgentTrainer:
         self.ma = MemoryAverage(100)
         self.memory = ReplayMemory(capacity=memory_capacity)
 
-    def train(self, starting_epoch=1, nb_epochs=100, batch_size=128, n_step=10, nb_steps=1000, gamma=0.99):
+    def train(self, starting_epoch=1, nb_epochs=100, batch_size=128, n_step=10, n_steps=1000, gamma=0.99):
         """
-        
-        :param starting_epoch:
-        :param nb_epochs:
-        :param batch_size:
-        :param n_step:
-        :param nb_steps:
-        :param gamma:
-        :return:
+        Train the agent given to the trainer. The trainer will first fill the memory up to it's capacity using the
+        received agent. After that the agent training will continue.
+
+        On each 10 epochs the agent and training memory are saved. Also the scoring plots are generated.
+        :param starting_epoch: number of the epoch that we are going to start.
+        :param nb_epochs: for how many epochs we are going to train the agent.
+        :param batch_size: number of samples taken in each training step.
+        :param n_step: how many steps the agent will perform in the environment before saving them as a memory record.
+        :param n_steps: how many records will be saved to the memory before training will happen.
+        :param gamma: gamma parameter of the agent eligibility trace algorithm.
+        :return: None
         """
         game = viz.DoomGame()
         game.load_config(self.agent.scenario_path)
@@ -49,12 +50,12 @@ class AgentTrainer:
             reward = 0.0
             while True:
                 state = game.get_state()
-                state_data = self.agent.step_reader(state=state)
+                state_data = self.agent.read_state(state=state)
                 action = self.agent.make_action(state_data=state_data) if self.memory.is_buffer_full() else choice(
                     range(0, self.agent.nb_available_buttons))
                 game_reward = game.make_action(self.agent.actions[action])
                 reward += self.agent.calculate_reward(game_reward=game_reward)
-                history.append(self.agent.generate_history(action=action, game_finished=game.is_episode_finished()))
+                history.append(self.agent.generate_history_record(action=action, game_finished=game.is_episode_finished()))
                 if len(history) > n_step + 1:
                     history.popleft()
                 if len(history) == n_step + 1:
@@ -69,7 +70,7 @@ class AgentTrainer:
                     reward = 0.0
                     game.new_episode()
                     history.clear()
-                if len(histories) >= nb_steps:
+                if len(histories) >= n_steps:
                     break
             for history in histories:
                 self.memory.append_memory(history)
@@ -79,14 +80,7 @@ class AgentTrainer:
                 continue
             start = datetime.datetime.now()
             for batch in self.memory.sample_batch(batch_size):
-                image_inputs, linear_inputs, targets = self.agent.eligibility_trace(batch=batch, gamma=gamma)
-                image_inputs, linear_inputs, targets = Variable(image_inputs).to(utils.DEVICE_NAME), Variable(
-                    linear_inputs).to(utils.DEVICE_NAME), Variable(targets)
-                predictions = self.cnn(image_inputs, linear_inputs)
-                loss_error = self.loss(predictions, targets)
-                self.optimizer.zero_grad()
-                loss_error.backward()
-                self.optimizer.step()
+                self.agent.perform_training_step(batch=batch, gamma=gamma)
             stop = datetime.datetime.now()
             delta = stop - start
             rewards_steps = rewards
@@ -103,7 +97,7 @@ class AgentTrainer:
                 score_file = "results\\scores_" + self.agent.agent_identifier + "_" + str(epoch) + ".png"
                 avg_score_file = "results\\avg_scores_" + self.agent.agent_identifier + "_" + str(epoch) + ".png"
                 memory_file = "results\\buffer_" + self.agent.agent_identifier + "_" + str(epoch) + ".pickle"
-                self.memory.save_memory_buffer(memory_file)
+                # self.memory.save_memory_buffer(memory_file) # Currently giving an error
                 print("Saving model file: {} and diagram: {}".format(model_file, score_file))
                 plt.clf()
                 plt.plot(history_reward, color='blue')
@@ -115,5 +109,3 @@ class AgentTrainer:
             if epoch == nb_epochs:
                 print("Reached last epoch, finishing...")
                 break
-
-        yield

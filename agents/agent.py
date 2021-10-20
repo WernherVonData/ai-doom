@@ -39,6 +39,10 @@ class Agent:
         raise NotImplementedError("Method {} must be implemented in the child class".format("generate_history_record"))
         yield
 
+    def perform_training_step(self, batch, gamma):
+        raise NotImplementedError("Method {} must be implemented in the child class".format("perform_training_step"))
+        yield
+
     def eligibility_trace(self, batch, gamma):
         raise NotImplementedError("Method {} must be implemented in the child class".format("eligibility_trace"))
         yield

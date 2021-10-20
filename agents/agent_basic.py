@@ -2,9 +2,10 @@ from collections import namedtuple
 
 import numpy as np
 import torch
+from torch.autograd import Variable
 
-from agent import Agent
-import cnn_agent
+from . import agent
+from . import cnn_agent
 import image_preprocessing
 import utils
 import torch.optim as optim
@@ -13,17 +14,17 @@ import torch.optim as optim
 _Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
 
-class AgentBasic(Agent):
+class AgentBasic(agent.Agent):
 
     def __init__(self, scenario_name, agent_identifier, temperature=1.0, image_dim=80, lr=0.001):
-        super.__init__(scenario_name, agent_identifier, temperature, image_dim, lr)
+        super(AgentBasic, self).__init__(scenario_name, agent_identifier, temperature, image_dim, lr)
         self.cnn = cnn_agent.CNN(number_actions=self.nb_available_buttons, image_dim=image_dim)
         self.cnn.to(utils.DEVICE_NAME)
         self.ai = cnn_agent.AI(brain=self.cnn, body=self.softmax_body)
         self.optimizer = optim.Adam(self.cnn.parameters(), lr=self.lr)
 
     def read_state(self, state):
-        buffer = state
+        buffer = state.screen_buffer
         self.last_image = image_preprocessing.to_grayscale_and_resize(buffer, self.image_dim, self.image_dim)
         return np.array([self.last_image])
 
@@ -36,6 +37,15 @@ class AgentBasic(Agent):
 
     def generate_history_record(self, action, game_finished):
         return _Step(state=self.last_image, action=action, reward=self.last_reward, done=game_finished)
+
+    def perform_training_step(self, batch, gamma):
+        image_inputs, targets = self.eligibility_trace(batch=batch, gamma=gamma)
+        image_inputs, targets = Variable(image_inputs).to(utils.DEVICE_NAME), Variable(targets)
+        predictions = self.cnn(image_inputs)
+        loss_error = self.loss(predictions, targets)
+        self.optimizer.zero_grad()
+        loss_error.backward()
+        self.optimizer.step()
 
     def eligibility_trace(self, batch, gamma=0.99):
         inputs = []
