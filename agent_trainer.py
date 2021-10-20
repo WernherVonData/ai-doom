@@ -23,7 +23,7 @@ class AgentTrainer:
         Train the agent given to the trainer. The trainer will first fill the memory up to it's capacity using the
         received agent. After that the agent training will continue.
 
-        On each 10 epochs the agent and training memory are saved. Also the scoring plots are generated.
+        Every 10 epochs the agent and training memory are saved. Also the scoring plots are generated.
         :param starting_epoch: number of the epoch that we are going to start.
         :param nb_epochs: for how many epochs we are going to train the agent.
         :param batch_size: number of samples taken in each training step.
