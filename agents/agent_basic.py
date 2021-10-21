@@ -1,17 +1,13 @@
-from collections import namedtuple
-
 import numpy as np
 import torch
 from torch.autograd import Variable
 
 from . import agent
 from . import cnn_agent
+from . import history_records
 import image_preprocessing
 import utils
 import torch.optim as optim
-
-
-_Step = namedtuple('Step', ['state', 'action', 'reward', 'done'])
 
 
 class AgentBasic(agent.Agent):
@@ -36,7 +32,8 @@ class AgentBasic(agent.Agent):
         return self.last_reward
 
     def generate_history_record(self, action, game_finished):
-        return _Step(state=self.last_image, action=action, reward=self.last_reward, done=game_finished)
+        return history_records.BasicStep(state=self.last_image, action=action, reward=self.last_reward,
+                                         done=game_finished)
 
     def perform_training_step(self, batch, gamma):
         image_inputs, targets = self.eligibility_trace(batch=batch, gamma=gamma)

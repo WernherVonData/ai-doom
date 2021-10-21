@@ -11,6 +11,7 @@ import utils
 from katie.rl import ReplayMemory
 from utils import MemoryAverage
 
+from agents import history_records
 
 class AgentTrainer:
     def __init__(self, agent_to_train, memory_capacity=100000):
@@ -97,7 +98,7 @@ class AgentTrainer:
                 score_file = "results\\scores_" + self.agent.agent_identifier + "_" + str(epoch) + ".png"
                 avg_score_file = "results\\avg_scores_" + self.agent.agent_identifier + "_" + str(epoch) + ".png"
                 memory_file = "results\\buffer_" + self.agent.agent_identifier + "_" + str(epoch) + ".pickle"
-                # self.memory.save_memory_buffer(memory_file) # Currently giving an error
+                self.memory.save_memory_buffer(memory_file) # Currently giving an error
                 print("Saving model file: {} and diagram: {}".format(model_file, score_file))
                 plt.clf()
                 plt.plot(history_reward, color='blue')
