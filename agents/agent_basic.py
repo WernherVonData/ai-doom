@@ -62,4 +62,3 @@ class AgentBasic(agent.Agent):
 
     def load_agent_optimizer_and_replay_memory(self, model_path, memory_path):
         self.cnn, self.optimizer = utils.load(model_path, model_used=self.cnn, optimizer_used=self.optimizer)
-        self.memory.load_memory_buffer(memory_path)

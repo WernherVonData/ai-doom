@@ -11,7 +11,9 @@ import utils
 from katie.rl import ReplayMemory
 from utils import MemoryAverage
 
+# Provides definitions of the objects that are serialized by this script
 from agents import history_records
+
 
 class AgentTrainer:
     def __init__(self, agent_to_train, memory_capacity=100000):
@@ -19,7 +21,7 @@ class AgentTrainer:
         self.ma = MemoryAverage(100)
         self.memory = ReplayMemory(capacity=memory_capacity)
 
-    def train(self, starting_epoch=1, nb_epochs=100, batch_size=128, n_step=10, n_steps=1000, gamma=0.99):
+    def train(self, starting_epoch=1, nb_epochs=100, batch_size=128, n_step=10, n_steps=1000, gamma=0.99, memory_path=None):
         """
         Train the agent given to the trainer. The trainer will first fill the memory up to it's capacity using the
         received agent. After that the agent training will continue.
@@ -31,6 +33,7 @@ class AgentTrainer:
         :param n_step: how many steps the agent will perform in the environment before saving them as a memory record.
         :param n_steps: how many records will be saved to the memory before training will happen.
         :param gamma: gamma parameter of the agent eligibility trace algorithm.
+        :param memory_path: path to the memory file, is set to None the learning will start with empty memory
         :return: None
         """
         game = viz.DoomGame()
@@ -42,6 +45,9 @@ class AgentTrainer:
         history_reward = []
         avg_history_reward = []
         epoch = starting_epoch
+
+        if memory_path is not None:
+            self.memory.load_memory_buffer(memory_path)
 
         while True:
             if game.is_episode_finished():
