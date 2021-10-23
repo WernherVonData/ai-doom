@@ -6,8 +6,9 @@ import agent_trainer
 
 def read_arguments(args):
     _agent_name_arg = "--agent_name"
-    _scenario_name_arg = "--scenario"
     _agent_model_path_arg = "--agent_model_path"
+    _scenario_name_arg = "--scenario"
+    _starting_epoch_arg = "--starting_epoch"
     _nb_epochs_arg = "--nb_epochs"
     _image_dim_arg = "--image_dim"
     _memory_capacity_arg = "--memory_capacity"
@@ -18,18 +19,67 @@ def read_arguments(args):
     agent_name = None
     agent_path = None
     scenario_name = None
-    memory_path = None
+    starting_epoch = 1
     nb_epochs = 50
+    image_dim = 80
+    memory_capacity = 1000
+    memory_path = None
     n_step = 10
     n_steps = 100
-    memory_capacity = 1000
-    image_dim = 80
+
+    for i in range(1, len(args)):
+        if args[i] in _agent_name_arg:
+            agent_name = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _agent_model_path_arg:
+            agent_path = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _scenario_name_arg:
+            scenario_name = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _starting_epoch_arg:
+            starting_epoch = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _nb_epochs_arg:
+            nb_epochs = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _image_dim_arg:
+            image_dim = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _memory_capacity_arg:
+            memory_capacity = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _memory_path_arg:
+            memory_path = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _n_step_arg:
+            n_step = args[i + 1]
+            i += 1
+            continue
+        if args[i] in _n_steps_arg:
+            n_steps = args[i + 1]
+            i += 1
+            continue
+    return agent_name, agent_path, scenario_name, starting_epoch, nb_epochs, image_dim, memory_capacity, memory_path, n_step, n_steps
 
 
 def main(args):
-    agent = agent_basic.AgentBasic(scenario_name="basic", agent_identifier="agent_basic", image_dim=80)
-    trainer = agent_trainer.AgentTrainer(agent_to_train=agent, memory_capacity=1000)
-    trainer.train(nb_epochs=50, n_step=10, n_steps=200)
+    agent_name, agent_path, scenario_name, starting_epoch, nb_epochs, image_dim, memory_capacity, memory_path, n_step, n_steps = read_arguments(
+        args=args)
+    if agent_name is None or scenario_name is None:
+        raise ValueError("--agent_name and --scenario must be set.")
+    # TODO: Handle set agent path/memory path
+    agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=80)
+    trainer = agent_trainer.AgentTrainer(agent_to_train=agent, memory_capacity=memory_capacity)
+    trainer.train(nb_epochs=nb_epochs, n_step=n_step, n_steps=n_steps, starting_epoch=starting_epoch)
     return
 
 
