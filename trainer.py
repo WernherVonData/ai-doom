@@ -82,8 +82,8 @@ def main(args):
         print("> Loading agent from file for training continuation")
         agent.load_agent_optimizer(model_path=agent_path)
     trainer = agent_trainer.AgentTrainer(agent_to_train=agent, memory_capacity=memory_capacity)
-    trainer.train(nb_epochs=nb_epochs, n_step=n_step, n_steps=n_steps, starting_epoch=starting_epoch,
-                  memory_path=memory_path)
+    trainer.train(memory_path=memory_path, n_step=n_step, n_steps=n_steps, nb_epochs=nb_epochs,
+                  starting_epoch=starting_epoch)
     return
 
 
