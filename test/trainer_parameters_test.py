@@ -1,7 +1,12 @@
-from trainer import read_arguments
+from trainer import main
 
 
 def test_correct_parameters(mocker):
-    _agent_mock = mocker.path("agents.agent_basic.AgentBasic.__init__")
-    read_arguments(["script-name", "--agent_name", "basic", "--scenario", "basic"])
-    assert _agent_mock.call_count == 1
+    _trainer_mock = mocker.patch("trainer.agent_trainer.AgentTrainer.train")
+    main(["script-name", "--agent_name", "basic", "--scenario", "basic"])
+    print("DDDUUUPPPAAA")
+    print(_trainer_mock.call_args_list)
+    print(_trainer_mock.call_args)
+    _trainer_mock.assert_called_once()
+    assert _trainer_mock.call_count == 0
+
