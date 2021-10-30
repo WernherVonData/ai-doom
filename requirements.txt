@@ -13,4 +13,3 @@ torchaudio
 ai-katie
 pytest
 pytest-mock
-vizdoom
