@@ -76,10 +76,14 @@ def main(args):
         args=args)
     if agent_name is None or scenario_name is None:
         raise ValueError("--agent_name and --scenario must be set.")
-    # TODO: Handle set agent path/memory path
+    # TODO: distinguish agent by the parameter
     agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=80)
+    if agent_path is not None:
+        print("> Loading agent from file for training continuation")
+        agent.load_agent_optimizer(model_path=agent_path)
     trainer = agent_trainer.AgentTrainer(agent_to_train=agent, memory_capacity=memory_capacity)
-    trainer.train(nb_epochs=nb_epochs, n_step=n_step, n_steps=n_steps, starting_epoch=starting_epoch)
+    trainer.train(nb_epochs=nb_epochs, n_step=n_step, n_steps=n_steps, starting_epoch=starting_epoch,
+                  memory_path=memory_path)
     return
 
 

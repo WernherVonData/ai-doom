@@ -60,5 +60,5 @@ class AgentBasic(agent.Agent):
             targets.append(target)
         return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.stack(targets)
 
-    def load_agent_optimizer_and_replay_memory(self, model_path, memory_path):
+    def load_agent_optimizer(self, model_path):
         self.cnn, self.optimizer = utils.load(model_path, model_used=self.cnn, optimizer_used=self.optimizer)

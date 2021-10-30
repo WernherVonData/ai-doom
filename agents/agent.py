@@ -47,6 +47,6 @@ class Agent:
         raise NotImplementedError("Method {} must be implemented in the child class".format("eligibility_trace"))
         yield
 
-    def load_agent_optimizer_and_replay_memory(self, model_path, memory_path):
+    def load_agent_optimizer(self, model_path, memory_path):
         raise NotImplementedError("Method {} must be implemented in the child class".format("load_agent_optimizer_and_replay_memory"))
         yield
