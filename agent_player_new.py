@@ -64,6 +64,9 @@ def main(args):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
 
+    # TODO: Play the game with parameters (first finish the trainer completely)
+    # TODO: Add tests for parameter verification
+
     return
 
 

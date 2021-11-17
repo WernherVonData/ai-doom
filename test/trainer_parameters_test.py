@@ -41,3 +41,15 @@ def test_empty_script_name():
 def test_empty_agent_name():
     with pytest.raises(ValueError):
         main(["script-name", "--agent_name", "basic"])
+
+
+def test_wrong_agent_name():
+    with pytest.raises(NotImplementedError) as not_implemented:
+        main(["script-name", "--agent_name", "basic2", "--scenario", "basic"])
+    assert str(not_implemented.value) == "There is not agent implemented for agent_name: basic2"
+
+
+def test_empty_agent_name():
+    with pytest.raises(NotImplementedError) as not_implemented:
+        main(["script-name", "--agent_name", " ", "--scenario", "basic"])
+    assert str(not_implemented.value) == "There is not agent implemented for agent_name:  "
