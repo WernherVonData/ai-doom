@@ -77,7 +77,7 @@ def main(args):
     if agent_name is None or scenario_name is None:
         raise ValueError("--agent_name and --scenario must be set.")
     agent = None
-    if agent_name is "basic":
+    if agent_name == "basic":
         agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=80)
     if agent is None:
         raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))

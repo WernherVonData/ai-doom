@@ -1,6 +1,10 @@
 import sys
+from time import sleep
+
+import vizdoom as vzd
 
 import utils
+from agents import agent_basic
 
 """
 - scenario_name - Based on the scenario we will what kind of scenario play, but also what kind of image processing approach use to 
@@ -53,8 +57,8 @@ def read_from_arguments(args):
 
 
 def main(args):
-    scenario_name, agent, agent_path, image_dim, nb_episodes = read_from_arguments(args)
-    if scenario_name or agent or agent_path is None:
+    scenario_name, agent_name, agent_path, image_dim, nb_episodes = read_from_arguments(args)
+    if scenario_name is None or agent_name is None or agent_path is None:
         raise ValueError("Scenario, agent and path to serialized agent MUST be specified")
 
     print("=>device used: {}".format(utils.DEVICE_NAME))
@@ -64,6 +68,27 @@ def main(args):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
     number_actions = len(actions)
 
+    agent = None
+    if agent_name == "basic":
+        agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=80)
+    if agent is None:
+        raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
+    agent.load_agent_optimizer(agent_path)
+    game = vzd.DoomGame()
+    game.load_config(scenario)
+    game.init()
+    sleep_time = 1.0 / vzd.DEFAULT_TICRATE  # = 0.028
+    nb_episodes = 50
+    for episode in range(1, nb_episodes+1):
+        game.new_episode()
+        reward = 0
+        while not game.is_episode_finished():
+            state_data = agent.read_state(state=game.get_state())
+            game_reward = agent.make_action(state_data=state_data)
+            reward += agent.calculate_reward(game_reward=game_reward)
+            if sleep_time > 0:
+                sleep(sleep_time)
+        print("Episode {}, reward: {}".format(episode, reward))
     # TODO: Play the game with parameters (first finish the trainer completely)
     # TODO: Add tests for parameter verification
 
