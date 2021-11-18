@@ -1,5 +1,5 @@
 import pytest
-from agent_player_new import main
+from agent_player import main
 
 _default_scenario_name = None
 _default_agent = None
