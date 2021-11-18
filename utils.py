@@ -36,3 +36,14 @@ def load(agent_file, model_used, optimizer_used):
     else:
         print("no checkpoint found...")
     return model_used, optimizer_used
+
+
+def get_path_and_number_of_actions_to_scenario(scenario_name):
+    if scenario_name == "basic":
+        return "scenarios/basic.cfg", 3
+    if scenario_name == "rocket":
+        return "scenarios/rocket_basic.cfg", 3
+    if scenario_name == "corridor":
+        return "scenarios/deadly_corridor.cfg", 7
+    print("=> Scenario {} has wrong name or it's not supported yet".format(scenario_name))
+    return None, None

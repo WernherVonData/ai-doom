@@ -1,56 +1,93 @@
-import vizdoom as vzd
-import torch
-from torch.autograd import Variable
-from agents import cnn_agent
-import image_preprocessing
-import numpy as np
+import sys
 from time import sleep
+
+import vizdoom as vzd
+
 import utils
-from katie.rl.softmax_body import SoftmaxBody
+from agents import agent_basic
+
+"""
+- scenario_name - Based on the scenario we will what kind of scenario play, but also what kind of image processing approach use to 
+convert it to the grayscale.
+    - basic
+    - rocket_basic
+    - corridor
+- agent_type - By the agent we will know which agent to use
+- agent_model_and_optimizer_path - By the path we will know where to load the agent weights and optimizer - it must be tightly connected with the agent,
+unless it will not work
+- image_dim Image dim is by default 80, but it should be as well matching the agent parameters.
+- nb_episodes - How many episodes are we going to play. 
+"""
 
 
-class AI:
-    def __init__(self, brain, body):
-        self.brain = brain
-        self.body = body
+def read_from_arguments(args):
+    _scenario_name_arg = "--scenario"
+    _agent_name_arg = "--agent_name"
+    _agent_model_path_arg = "--agent_model_path"
+    _image_dim_arg = "--image_dim"
+    _nb_episodes_arg = "--nb_episodes"
 
-    def __call__(self, inputs):
-        input_images = Variable(torch.from_numpy(np.array(inputs, dtype=np.float32))).to(utils.DEVICE_NAME)
-        output = self.brain(input_images)
-        actions = self.body(output)
-        return actions.data.cpu().numpy()
+    scenario_name = None
+    agent = None
+    agent_path = None
+    image_dim = 80
+    nb_episodes = 50
+    for i in range(1, len(args)):
+        if args[i] in _scenario_name_arg:
+            scenario_name = args[i+1]
+            i += 1
+            continue
+        if args[i] in _agent_name_arg:
+            agent = args[i+1]
+            i += 1
+            continue
+        if args[i] in _agent_model_path_arg:
+            agent_path = args[i+1]
+            i += 1
+            continue
+        if args[i] in _image_dim_arg:
+            image_dim = args[i+1]
+            i += 1
+            continue
+        if args[i] in _nb_episodes_arg:
+            nb_episodes = args[i+1]
+            i += 1
+            continue
+    return scenario_name, agent, agent_path, image_dim, nb_episodes
 
 
-if __name__ == '__main__':
-    scenario = "scenarios/rocket_basic.cfg"
+def main(args):
+    scenario_name, agent_name, agent_path, image_dim, nb_episodes = read_from_arguments(args)
+    if scenario_name is None or agent_name is None or agent_path is None:
+        raise ValueError("Scenario, agent and path to serialized agent MUST be specified")
+
     print("=>device used: {}".format(utils.DEVICE_NAME))
-
+    scenario, nb_available_buttons = utils.get_path_and_number_of_actions_to_scenario(scenario_name=scenario_name)
     actions = []
-    nb_available_buttons = 3
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
-    number_actions = len(actions)
-    image_dim = 128
 
-    cnn = cnn_agent.CNN(number_actions=nb_available_buttons, image_dim=image_dim)
-    cnn = utils.load("experiments\\basic_rocket_scenario\\basic_rocket_cnn_doom_50.pth", cnn)
-    cnn.to(utils.DEVICE_NAME)
-    softmax_body = SoftmaxBody(temperature=1.0)
-    ai = AI(brain=cnn, body=softmax_body)
+    agent = None
+    if agent_name == "basic":
+        agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
+    if agent is None:
+        raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
+    agent.load_agent_optimizer(agent_path)
     game = vzd.DoomGame()
     game.load_config(scenario)
     game.init()
-    sleep_time = 1.0 / vzd.DEFAULT_TICRATE  # = 0.028
-    nb_episodes = 50
     for episode in range(1, nb_episodes+1):
         game.new_episode()
         reward = 0
         while not game.is_episode_finished():
-            state = game.get_state()
-            buffer = state.screen_buffer
-            img = image_preprocessing.to_resize(buffer, image_dim, image_dim)
-            action = ai(np.array([img]))[0][0]
-            reward += game.make_action(actions[action])
-            if sleep_time > 0:
-                sleep(sleep_time)
+            state_data = agent.read_state(state=game.get_state())
+            action = agent.make_action(state_data=state_data)
+            game_reward = game.make_action(agent.actions[action])
+            reward += agent.calculate_reward(game_reward=game_reward)
         print("Episode {}, reward: {}".format(episode, reward))
+    # TODO: Add tests for parameter verification
+    return
+
+
+if __name__ == "__main__":
+    main(sys.argv)
