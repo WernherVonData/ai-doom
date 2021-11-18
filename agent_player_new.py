@@ -42,7 +42,7 @@ def read_from_arguments(args):
             i += 1
             continue
         if args[i] in _agent_model_path_arg:
-            agent_path = args[i + 1]
+            agent_path = args[i+1]
             i += 1
             continue
         if args[i] in _image_dim_arg:
@@ -66,32 +66,26 @@ def main(args):
     actions = []
     for i in range(0, nb_available_buttons):
         actions.append([True if action_index == i else False for action_index in range(0, nb_available_buttons)])
-    number_actions = len(actions)
 
     agent = None
     if agent_name == "basic":
-        agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=80)
+        agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent is None:
         raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
     agent.load_agent_optimizer(agent_path)
     game = vzd.DoomGame()
     game.load_config(scenario)
     game.init()
-    sleep_time = 1.0 / vzd.DEFAULT_TICRATE  # = 0.028
-    nb_episodes = 50
     for episode in range(1, nb_episodes+1):
         game.new_episode()
         reward = 0
         while not game.is_episode_finished():
             state_data = agent.read_state(state=game.get_state())
-            game_reward = agent.make_action(state_data=state_data)
+            action = agent.make_action(state_data=state_data)
+            game_reward = game.make_action(agent.actions[action])
             reward += agent.calculate_reward(game_reward=game_reward)
-            if sleep_time > 0:
-                sleep(sleep_time)
         print("Episode {}, reward: {}".format(episode, reward))
-    # TODO: Play the game with parameters (first finish the trainer completely)
     # TODO: Add tests for parameter verification
-
     return
 
 
