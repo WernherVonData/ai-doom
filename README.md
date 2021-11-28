@@ -36,9 +36,9 @@ python trainer.py --agent_name basic --scenario basic
 This will call agent training using the basic agent along with the most basic scenario from [Vizdoom](https://github.com/mwydmuch/ViZDoom/tree/master/scenarios).
 
 For script `trainer.py` the available options are:
-* --agent_name - the name of the agent, by default the available are: 'basic' and 'linear'.
+* --agent_name - (mandatory) the name of the agent, by default the available are: 'basic' and 'linear'.
 * --agent_model_path - the path to the serialized agent and optimizer.
-* --scenario - the scenario to train - available are (.cfg files are Vizdoom scenarios names): 'basic' (basic.cfg), 'rocket' (rocket_basic.cfg) and 'corridor' (deadly_corridor.cfg).
+* --scenario - (mandatory) the scenario to train - available are (.cfg files are Vizdoom scenarios names): 'basic' (basic.cfg), 'rocket' (rocket_basic.cfg) and 'corridor' (deadly_corridor.cfg).
 * --starting_epoch - number of the epoch that we are going to start.
 * --nb_epochs - for how many epochs we are going to train the agent.
 * --n_step -  how many steps the agent will perform in the environment before saving them as a memory record.
@@ -47,10 +47,12 @@ For script `trainer.py` the available options are:
 * --memory_path - path to the memory file, is set to None the learning will start with empty memory.
 * --image_dim - the dimension in pixels of read image (we are reading them as square)
 
+
+
 To play trained agent we can use script `player.py` for which the options are:
-* --scenario - same as for 'trainer.py'
-* --agent_name - same as for 'trainer.py'
-* --agent_model_path - same as for 'trainer.py'
+* --scenario - (mandatory) same as for 'trainer.py'
+* --agent_name - (mandatory) same as for 'trainer.py'
+* --agent_model_path - (mandatory) same as for 'trainer.py'
 * --image_dim - same as for 'trainer.py'
 * --nb_episodes - how many episodes (full gane ended with reaching goal/losing) we play
 

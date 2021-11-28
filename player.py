@@ -83,7 +83,7 @@ def main(args):
         game.new_episode()
         reward = 0
         while not game.is_episode_finished():
-            state_data = agent.read_game_data(game=game.get_state())
+            state_data = agent.read_game_data(game=game)
             action = agent.make_action(state_data=state_data)
             game_reward = game.make_action(agent.actions[action])
             reward += agent.calculate_reward(game_reward=game_reward)
