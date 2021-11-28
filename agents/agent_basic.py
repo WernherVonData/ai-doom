@@ -19,8 +19,8 @@ class AgentBasic(agent.Agent):
         self.ai = cnn_agent.AI(brain=self.cnn, body=self.softmax_body)
         self.optimizer = optim.Adam(self.cnn.parameters(), lr=self.lr)
 
-    def read_state(self, state):
-        buffer = state.screen_buffer
+    def read_game_data(self, game):
+        buffer = game.get_state().screen_buffer
         self.last_image = image_preprocessing.to_grayscale_and_resize(buffer, self.image_dim, self.image_dim)
         return np.array([self.last_image])
 

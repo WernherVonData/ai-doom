@@ -56,7 +56,7 @@ class AgentTrainer:
             history = deque()
             reward = 0.0
             while True:
-                state_data = self.agent.read_state(state=game.get_state())
+                state_data = self.agent.read_game_data(game=game)
                 action = self.agent.make_action(state_data=state_data) if self.memory.is_buffer_full() else choice(
                     range(0, self.agent.nb_available_buttons))
                 game_reward = game.make_action(self.agent.actions[action])

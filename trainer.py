@@ -1,6 +1,7 @@
 import sys
 
 from agents import agent_basic
+from agents import agent_two_input
 import agent_trainer
 
 
@@ -78,7 +79,9 @@ def main(args):
         raise ValueError("--agent_name and --scenario must be set.")
     agent = None
     if agent_name == "basic":
-        agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=80)
+        agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
+    if agent_name == "linear":
+        agent = agent_two_input.AgentTwoInput(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent is None:
         raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
 

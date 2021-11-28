@@ -8,7 +8,7 @@ from . import history_records
 import image_preprocessing
 import utils
 import torch.optim as optim
-import vizdoom as vzd
+import vizdoom as viz
 
 
 class AgentTwoInput(agent.Agent):
@@ -22,37 +22,45 @@ class AgentTwoInput(agent.Agent):
         self.current_health = 100
         self.step_nb = -1
         self.previous_health = 100
+        self.linear_input = []
         self.delta_health = 0
 
     # TODO Extend to read / game variables - maybe into separate function?
-    def read_state(self, state):
+    def read_game_data(self, game):
+        state = game.get_state()
         buffer = state.screen_buffer
         self.last_image = image_preprocessing.to_grayscale_and_resize(buffer, self.image_dim, self.image_dim)
-        self.health = game.get_game_variable(viz.GameVariable.HEALTH)
-        # ammo = game.get_game_variable(viz.GameVariable.AMMO2)
+        self.current_health = game.get_game_variable(viz.GameVariable.HEALTH)
         step = state.number
-        delta_hp = 0
-        if self.previous_hp >= health:
-            delta_hp = abs(previous_hp - health)
-            previous_hp = health
-        linear_input = np.array([[health, previous_hp, delta_hp, step]])
-        return np.array([self.last_image])
+        self.delta_health = 0
+        if self.previous_health >= self.current_health:
+            self.delta_health = abs(self.current_health - self.current_health)
+            self.previous_health = self.current_health
+        self.linear_input = np.array([[self.current_health, self.previous_health, self.delta_health, step]])
+        return [np.array([self.last_image]), self.linear_input]
 
     def make_action(self, state_data):
-        return self.ai(state_data)[0][0]
+        return self.ai(state_data[0], state_data[1])[0][0]
 
     def calculate_reward(self, game_reward):
-        self.last_reward = game_reward
+        reward_to_save = 0
+        reward_to_save -= self.delta_health
+        if self.current_health > 0:
+            reward_to_save += 10
+        reward_to_save += game_reward
+
+        self.last_reward = reward_to_save
         return self.last_reward
 
     def generate_history_record(self, action, game_finished):
-        return history_records.BasicStep(state=self.last_image, action=action, reward=self.last_reward,
+        return history_records.LinearStep(state=self.last_image, linear=self.linear_input, action=action, reward=self.last_reward,
                                          done=game_finished)
 
     def perform_training_step(self, batch, gamma):
-        image_inputs, targets = self.eligibility_trace(batch=batch, gamma=gamma)
-        image_inputs, targets = Variable(image_inputs).to(utils.DEVICE_NAME), Variable(targets)
-        predictions = self.cnn(image_inputs)
+        image_inputs, linear_inputs, targets = self.eligibility_trace(batch=batch, gamma=gamma)
+        image_inputs, linear_inputs, targets = Variable(image_inputs).to(utils.DEVICE_NAME), Variable(linear_inputs).to(
+            utils.DEVICE_NAME), Variable(targets)
+        predictions = self.cnn(image_inputs, linear_inputs)
         loss_error = self.loss(predictions, targets)
         self.optimizer.zero_grad()
         loss_error.backward()
@@ -60,19 +68,23 @@ class AgentTwoInput(agent.Agent):
 
     def eligibility_trace(self, batch, gamma=0.99):
         inputs = []
+        inputs_hp = []
         targets = []
         for series in batch:
             input = torch.from_numpy(np.array([series[0].state, series[-1].state], dtype=np.float32))
-            output = self.cnn(input.to(utils.DEVICE_NAME))
+            linear_input = torch.from_numpy(np.array([series[0].linear, series[-1].linear], dtype=np.float32))
+            output = self.cnn(input.to(utils.DEVICE_NAME), linear_input.to(utils.DEVICE_NAME))
             cumul_reward = 0.0 if series[-1].done else output[1].data.max()
             for step in reversed(series[:-1]):
                 cumul_reward = step.reward + gamma * cumul_reward
             state = series[0].state
+            hp = series[0].linear
             target = output[0].data
             target[series[0].action] = cumul_reward
             inputs.append(state)
+            inputs_hp.append(hp)
             targets.append(target)
-        return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.stack(targets)
+        return torch.from_numpy(np.array(inputs, dtype=np.float32)), torch.from_numpy(np.array(inputs_hp, dtype=np.float32)), torch.stack(targets)
 
     def load_agent_optimizer(self, model_path):
         self.cnn, self.optimizer = utils.load(model_path, model_used=self.cnn, optimizer_used=self.optimizer)
