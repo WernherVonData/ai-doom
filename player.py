@@ -5,6 +5,7 @@ import vizdoom as vzd
 
 import utils
 from agents import agent_basic
+from agents import agent_two_input
 
 """
 - scenario_name - Based on the scenario we will what kind of scenario play, but also what kind of image processing approach use to 
@@ -70,6 +71,8 @@ def main(args):
     agent = None
     if agent_name == "basic":
         agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
+    if agent_name == "linear":
+        agent = agent_two_input.AgentTwoInput(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent is None:
         raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
     agent.load_agent_optimizer(agent_path)
@@ -80,7 +83,7 @@ def main(args):
         game.new_episode()
         reward = 0
         while not game.is_episode_finished():
-            state_data = agent.read_state(state=game.get_state())
+            state_data = agent.read_game_data(game=game)
             action = agent.make_action(state_data=state_data)
             game_reward = game.make_action(agent.actions[action])
             reward += agent.calculate_reward(game_reward=game_reward)

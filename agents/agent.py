@@ -23,7 +23,7 @@ class Agent:
         self.cnn = None
         self.ai = None
 
-    def read_state(self, state):
+    def read_game_data(self, game):
         raise NotImplementedError("Method {} must be implemented in the child class".format("read_state"))
         yield
 
