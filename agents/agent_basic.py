@@ -21,7 +21,7 @@ class AgentBasic(agent.Agent):
 
     def read_game_data(self, game):
         buffer = game.get_state().screen_buffer
-        self.last_image = image_preprocessing.to_grayscale_and_resize(buffer, self.image_dim, self.image_dim)
+        self.last_image = self.screen_processing(buffer, self.image_dim, self.image_dim)
         return np.array([self.last_image])
 
     def make_action(self, state_data):

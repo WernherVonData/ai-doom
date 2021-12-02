@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import os
+import image_preprocessing
 
 DEVICE_NAME = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -45,5 +46,14 @@ def get_path_and_number_of_actions_to_scenario(scenario_name):
         return "scenarios/rocket_basic.cfg", 3
     if scenario_name == "corridor":
         return "scenarios/deadly_corridor.cfg", 7
+    print("=> Scenario {} has wrong name or it's not supported yet".format(scenario_name))
+    return None, None
+
+
+def get_screen_buffer_preprocessing_function(scenario_name):
+    if scenario_name == "basic" or scenario_name == "corridor":
+        return image_preprocessing.to_grayscale_and_resize
+    if scenario_name == "rocket":
+        return image_preprocessing.to_resize
     print("=> Scenario {} has wrong name or it's not supported yet".format(scenario_name))
     return None, None
