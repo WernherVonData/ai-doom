@@ -25,11 +25,10 @@ class AgentTwoInput(agent.Agent):
         self.linear_input = []
         self.delta_health = 0
 
-    # TODO Extend to read / game variables - maybe into separate function?
     def read_game_data(self, game):
         state = game.get_state()
         buffer = state.screen_buffer
-        self.last_image = image_preprocessing.to_grayscale_and_resize(buffer, self.image_dim, self.image_dim)
+        self.last_image = self.screen_processing(buffer, self.image_dim, self.image_dim)
         self.current_health = game.get_game_variable(viz.GameVariable.HEALTH)
         step = state.number
         self.delta_health = 0

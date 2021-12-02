@@ -9,6 +9,7 @@ class Agent:
 
     def __init__(self, scenario_name, agent_identifier, temperature=1.0, image_dim=80, lr=0.001):
         self.scenario_path, self.nb_available_buttons = utils.get_path_and_number_of_actions_to_scenario(scenario_name=scenario_name)
+        self.screen_processing = utils.get_screen_buffer_preprocessing_function(scenario_name=scenario_name)
         self.actions = []
         for i in range(0, self.nb_available_buttons):
             self.actions.append(

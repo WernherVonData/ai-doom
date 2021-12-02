@@ -88,7 +88,6 @@ def main(args):
             game_reward = game.make_action(agent.actions[action])
             reward += agent.calculate_reward(game_reward=game_reward)
         print("Episode {}, reward: {}".format(episode, reward))
-    # TODO: Add tests for parameter verification
     return
 
 
