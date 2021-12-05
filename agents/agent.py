@@ -18,7 +18,7 @@ class Agent:
         self.softmax_body = SoftmaxBody(temperature=temperature)
         self.loss = nn.MSELoss()
         self.lr = lr
-        self.agent_identifier = agent_identifier
+        self.agent_identifier = agent_identifier+"_"+scenario_name
         self.last_image = None
         self.last_reward = None
         self.cnn = None

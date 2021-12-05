@@ -2,6 +2,7 @@ import sys
 
 from agents import agent_basic
 from agents import agent_two_input
+from agents import agent_defend_center
 import agent_trainer
 
 
@@ -42,19 +43,19 @@ def read_arguments(args):
             i += 1
             continue
         if args[i] in _starting_epoch_arg:
-            starting_epoch = args[i + 1]
+            starting_epoch = int(args[i + 1])
             i += 1
             continue
         if args[i] in _nb_epochs_arg:
-            nb_epochs = args[i + 1]
+            nb_epochs = int(args[i + 1])
             i += 1
             continue
         if args[i] in _image_dim_arg:
-            image_dim = args[i + 1]
+            image_dim = int(args[i + 1])
             i += 1
             continue
         if args[i] in _memory_capacity_arg:
-            memory_capacity = args[i + 1]
+            memory_capacity = int(args[i + 1])
             i += 1
             continue
         if args[i] in _memory_path_arg:
@@ -62,11 +63,11 @@ def read_arguments(args):
             i += 1
             continue
         if args[i] in _n_step_arg:
-            n_step = args[i + 1]
+            n_step = int(args[i + 1])
             i += 1
             continue
         if args[i] in _n_steps_arg:
-            n_steps = args[i + 1]
+            n_steps = int(args[i + 1])
             i += 1
             continue
     return agent_name, agent_path, scenario_name, starting_epoch, nb_epochs, image_dim, memory_capacity, memory_path, n_step, n_steps
@@ -82,6 +83,8 @@ def main(args):
         agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent_name == "linear":
         agent = agent_two_input.AgentTwoInput(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
+    if agent_name == "defend_center":
+        agent = agent_defend_center.AgentDefendCenter(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent is None:
         raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
 

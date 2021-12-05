@@ -1,11 +1,11 @@
 import sys
-from time import sleep
 
 import vizdoom as vzd
 
 import utils
 from agents import agent_basic
 from agents import agent_two_input
+from agents import agent_defend_center
 
 """
 - scenario_name - Based on the scenario we will what kind of scenario play, but also what kind of image processing approach use to 
@@ -47,11 +47,11 @@ def read_from_arguments(args):
             i += 1
             continue
         if args[i] in _image_dim_arg:
-            image_dim = args[i+1]
+            image_dim = int(args[i+1])
             i += 1
             continue
         if args[i] in _nb_episodes_arg:
-            nb_episodes = args[i+1]
+            nb_episodes = int(args[i+1])
             i += 1
             continue
     return scenario_name, agent, agent_path, image_dim, nb_episodes
@@ -73,6 +73,8 @@ def main(args):
         agent = agent_basic.AgentBasic(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent_name == "linear":
         agent = agent_two_input.AgentTwoInput(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
+    if agent_name == "defend_center":
+        agent = agent_defend_center.AgentDefendCenter(scenario_name=scenario_name, agent_identifier=agent_name, image_dim=image_dim)
     if agent is None:
         raise NotImplementedError("There is not agent implemented for agent_name: {}".format(agent_name))
     agent.load_agent_optimizer(agent_path)

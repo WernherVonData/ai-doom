@@ -36,7 +36,7 @@ python trainer.py --agent_name basic --scenario basic
 This will call agent training using the basic agent along with the most basic scenario from [Vizdoom](https://github.com/mwydmuch/ViZDoom/tree/master/scenarios).
 
 For script `trainer.py` the available options are:
-* --agent_name - (mandatory) the name of the agent, by default the available are: 'basic' and 'linear'.
+* --agent_name - (mandatory) the name of the agent, by default the available are: 'basic', 'linear' and 'defend_center'.
 * --agent_model_path - the path to the serialized agent and optimizer.
 * --scenario - (mandatory) the scenario to train - available are (.cfg files are Vizdoom scenarios names): 'basic' (basic.cfg), 'rocket' (rocket_basic.cfg) and 'corridor' (deadly_corridor.cfg).
 * --starting_epoch - number of the epoch that we are going to start.
